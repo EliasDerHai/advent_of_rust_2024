@@ -7,6 +7,8 @@ enum Direction {
     Undecided,
 }
 
+static DEBUG: bool = false;
+
 pub fn solve_day_02_part_01(input: Vec<String>) -> u32 {
     input
         .iter()
@@ -18,7 +20,7 @@ pub fn solve_day_02_part_01(input: Vec<String>) -> u32 {
                     if option.is_none() { return None; }
                     let dir = option.unwrap().0;
                     let last = option.unwrap().1;
-                    println!("dir: {:?} - last: {} - curr: {}", dir, last, curr);
+                    if DEBUG { println!("dir: {:?} - last: {} - curr: {}", dir, last, curr) };
                     if last == 0 {
                         return Some((Undecided, curr));
                     }
@@ -45,38 +47,45 @@ pub fn solve_day_02_part_02(input: Vec<String>) -> u32 {
     input
         .iter()
         .map(|line| {
-            let folded = line
+            let numbers_of_line: Vec<i32> = line
                 .split_whitespace()
                 .map(|num| num.parse::<i32>().expect("Invalid number"))
-                /* direction, last value, bonus life */
-                // TODO fix - nice try but there is an conceptual issue here
-                //   bc the element might itself be fine but it's
-                //   removal might still make the row safe
-                //   e.g. 1 3 2 4 5 - 3 is safe but must still be removed!
-                .fold(Some((Undecided, 0, true)), |option, curr| {
-                    if option.is_none() { return None; }
-                    let dir = option.unwrap().0;
-                    let last = option.unwrap().1;
-                    let bonus_life = option.unwrap().2;
-                    println!("dir: {:?} - last: {} - curr: {}", dir, last, curr);
-                    if last == 0 {
-                        return Some((Undecided, curr, true));
-                    }
-                    if last == curr || curr < last - 3 || curr > last + 3 {
-                        return if bonus_life {
-                            Some((dir, last, false))
-                        } else {
-                            None
-                        };
-                    }
-                    return match dir {
-                        Undecided => Some((if last < curr { Increasing } else { Decreasing }, curr, bonus_life)),
-                        Increasing => if last < curr { Some((dir, curr, bonus_life)) } else { None },
-                        Decreasing => if last > curr { Some((dir, curr, bonus_life)) } else { None }
-                    };
-                });
+                .collect();
 
-            println!("{} is {}", line, if folded.is_some() { "safe" } else { "unsafe" });
+            // instead of being smart we can just try all variations!
+            let mut variations: Vec<Vec<i32>> = Vec::with_capacity(numbers_of_line.len() + 1);
+            variations.push(numbers_of_line.clone());
+            for i in 0..numbers_of_line.len() {
+                let mut variant = numbers_of_line.clone();
+                variant.remove(i);
+                variations.push(variant);
+            }
+
+            let folded = variations
+                .iter()
+                .map(|variation| variation
+                    .iter()
+                    .fold(Some((Undecided, 0)), |option, &curr| {
+                        if option.is_none() { return None; }
+                        let dir = option.unwrap().0;
+                        let last = option.unwrap().1;
+                        if DEBUG { println!("dir: {:?} - last: {} - curr: {}", dir, last, curr); }
+                        if last == 0 {
+                            return Some((Undecided, curr));
+                        }
+                        if last == curr || curr < last - 3 || curr > last + 3 {
+                            return None;
+                        }
+                        return match dir {
+                            Undecided => Some((if last < curr { Increasing } else { Decreasing }, curr)),
+                            Increasing => if last < curr { Some((dir, curr)) } else { None },
+                            Decreasing => if last > curr { Some((dir, curr)) } else { None }
+                        };
+                    }))
+                .find(|variation| variation.is_some());
+
+
+            if DEBUG { println!("{} is {}", line, if folded.is_some() { "safe" } else { "unsafe" }); }
 
             return match folded {
                 None => 0,
@@ -99,8 +108,6 @@ mod tests {
         let mut lines = Vec::new();
         lines.push(line);
 
-        println!("{:?}", lines);
-
         // act
         let actual = solve_day_02_part_01(lines);
 
@@ -114,8 +121,6 @@ mod tests {
         let line = String::from("23 26 28 29 32");
         let mut lines = Vec::new();
         lines.push(line);
-
-        println!("{:?}", lines);
 
         // act
         let actual = solve_day_02_part_01(lines);
