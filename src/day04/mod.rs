@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::day04::Directions::*;
+use crate::day04::Direction::*;
 
 /* represents read-direction (eg. NE means from left bottom to right top) */
 #[derive(Debug)]
-enum Directions {
+enum Direction {
     N,
     E,
     S,
@@ -14,6 +14,18 @@ enum Directions {
     NE,
     SE,
 }
+
+pub const DIRECTIONS: [Direction; 8] = [
+    N,
+    E,
+    S,
+    W,
+    NW,
+    SW,
+    NE,
+    SE,
+];
+
 
 /// takes a string and indexes every letter to a tuple (x, y)
 /// where x is the index of the horizontal position in the line
@@ -29,8 +41,17 @@ fn parse_to_map(input: String) -> HashMap<(isize, isize), char> {
         .collect::<HashMap<(isize, isize), char>>()
 }
 
-fn explore<F>(entry_pos: (isize, isize), search: &str, strategy: F, lookup: &HashMap<(isize, isize), char>) -> u32
-    where F: Fn((isize, isize)) -> (isize, isize)
+type NavigationStrategy = fn((isize, isize)) -> (isize, isize);
+
+/// searches for a sequence in a lookup hashmap with a given strategy
+/// returns true if sequence was found
+/// return false if sequence was not found
+fn search(
+    lookup: &HashMap<(isize, isize), char>,
+    search: &str,
+    entry_pos: (isize, isize),
+    strategy: NavigationStrategy,
+) -> bool
 {
     search.chars()
         .into_iter()
@@ -49,29 +70,17 @@ fn explore<F>(entry_pos: (isize, isize), search: &str, strategy: F, lookup: &Has
                 None => None
             };
         })
-        .map(|_| 1)
-        .unwrap_or(0)
+        .is_some()
 }
 
 pub fn solve_day_04_part_01(input: String) -> u32 {
     let letters = parse_to_map(input);
     let search_word = &"XMAS"[1..]; // X is the entry point so we essentially search for "MAS" from there on
-    let directions = vec![
-        N,
-        E,
-        S,
-        W,
-        NW,
-        SW,
-        NE,
-        SE,
-    ];
-
     letters
         .iter()
         .filter(|(_, &v)| v.to_ascii_uppercase() == 'X')
         .map(|(&(x, y), _)| {
-            directions.iter().map(|dir| {
+            DIRECTIONS.iter().map(|dir| {
                 let strategy: fn((isize, isize)) -> (isize, isize) = match dir {
                     N => |(x, y)| (x, y - 1),
                     E => |(x, y)| (x + 1, y),
@@ -82,7 +91,10 @@ pub fn solve_day_04_part_01(input: String) -> u32 {
                     NE => |(x, y)| (x + 1, y - 1),
                     SE => |(x, y)| (x + 1, y + 1)
                 };
-                explore((x, y), search_word, strategy, &letters)
+                return match search(&letters, search_word, (x, y), strategy) {
+                    true => 1,
+                    false => 0,
+                };
             })
                 .sum::<u32>()
         })
@@ -90,13 +102,61 @@ pub fn solve_day_04_part_01(input: String) -> u32 {
 }
 
 
-pub fn solve_day_04_part_02(input: Vec<String>) -> u32 {
-    todo!()
+pub fn solve_day_04_part_02(input: String) -> u32 {
+    let letters = parse_to_map(input);
+    let search_word = "MAS";
+    // a primary direction and it's two allowed counterparts that form an X
+    // NW     NE
+    //   \   /
+    //    \ /
+    //     X
+    //    / \
+    //   /   \
+    // SW     SE
+    let directions = [
+        (NE, (NW, SE)),
+        (SW, (NW, SE)),
+        (SE, (NE, SW)),
+        (NW, (NE, SW))
+    ];
+
+    let double: u32 = letters
+        .iter()
+        .filter(|(_, &v)| v.to_ascii_uppercase() == 'A')
+        .map(|(&(x, y), _)| {
+            directions.iter().map(|(primary_dir, (secondary_dir_option_1, secondary_dir_option_2))| {
+                let first = search_dir(&letters, search_word, x, y, primary_dir);
+                if !first { return 0; }
+                let sec_1 = search_dir(&letters, search_word, x, y, secondary_dir_option_1);
+                if sec_1 { return 1; }
+                let sec_2 = search_dir(&letters, search_word, x, y, secondary_dir_option_2);
+                if sec_2 { return 1; }
+                0
+            })
+                .sum::<u32>()
+        })
+        .sum();
+    double / 2
+}
+
+fn search_dir(letters: &HashMap<(isize, isize), char>, search_word: &str, x: isize, y: isize, dir: &Direction) -> bool {
+    let (strategy, entry_pos): (NavigationStrategy, (isize, isize)) = match dir {
+        NW => ((|(x, y)| (x - 1, y - 1)),
+               (x + 2, y + 2)),
+        SW => ((|(x, y)| (x - 1, y + 1)),
+               (x + 2, y - 2)),
+        NE => ((|(x, y)| (x + 1, y - 1)),
+               (x - 2, y + 2)),
+        SE => ((|(x, y)| (x + 1, y + 1)),
+               (x - 2, y - 2)),
+        _ => panic!("part_2 should only ever deal with diagonals")
+    };
+    search(&letters, search_word, entry_pos, strategy)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::day04::solve_day_04_part_01;
+    use crate::day04::{solve_day_04_part_01, solve_day_04_part_02};
     use crate::util::read_string;
 
     #[test]
@@ -176,7 +236,33 @@ MXMXAXMASX".trim().to_string();
     }
 
     #[test]
+    fn should_solve_day_04_part_02_sample_1() {
+        let input = "
+MMMSXXMASM
+MSAMXMSMSA
+AMXSXMAAMM
+MSAMASMSMX
+XMASAMXAMM
+XXAMMXXAMA
+SMSMSASXSS
+SAXAMASAAA
+MAMMMXMMMM
+MXMXAXMASX".trim().to_string();
+
+        let actual = solve_day_04_part_02(input);
+
+        assert_eq!(9, actual);
+    }
+
+    #[test]
     fn should_solve_day_04_part_02() {
-        todo!()
+        let input = read_string("./src/day04/input.txt")
+            .expect("Should have")
+            .trim()
+            .to_string();
+
+        let solution = solve_day_04_part_02(input);
+
+        println!("{solution}");
     }
 }
