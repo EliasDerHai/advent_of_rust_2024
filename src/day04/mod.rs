@@ -15,7 +15,7 @@ enum Direction {
     SE,
 }
 
-pub const DIRECTIONS: [Direction; 8] = [
+const DIRECTIONS: [Direction; 8] = [
     N,
     E,
     S,
