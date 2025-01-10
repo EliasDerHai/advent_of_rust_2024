@@ -2,7 +2,7 @@
 
 SRC_DIR="../src"
 
-FOLDER_NAME=${1:-$(read -p "Enter the name of the new day folder (e.g., day02): " && echo $REPLY)}
+FOLDER_NAME=${1:-$(read -p "Enter the name of the new day folder (e.g., day02): " && echo "$REPLY")}
 
 FOLDER_SNAKE=${FOLDER_NAME//day/day_}
 
