@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::day06::Direction::*;
-use crate::day06::FieldType::Out;
+use crate::day06::FieldType::*;
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq, Default)]
 enum FieldType {
     // no obstacle can move on - true if visited - false otherwise
     #[default]
@@ -15,7 +15,7 @@ enum FieldType {
 }
 
 /// Direction into which the guard faces
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
 enum Direction {
     N,
     E,
@@ -46,14 +46,14 @@ fn parse_to_map(input: String) -> (GameMap, GamePosition) {
             let y = y as isize;
             match c {
                 '#' => {
-                    map.insert((x, y), FieldType::Occupied);
+                    map.insert((x, y), Occupied);
                 }
                 '.' => {
-                    map.insert((x, y), FieldType::Free);
+                    map.insert((x, y), Free);
                 }
                 '^' => {
                     start_pos = (x, y);
-                    map.insert((x, y), FieldType::Free);
+                    map.insert((x, y), Free);
                 }
                 _ => panic!("Unexpected token '{}' in input data", c),
             }
@@ -91,11 +91,11 @@ fn travel_one_unit(map: &GameMap, pos: &GamePosition, dir: &Direction) -> (GameP
 fn traverse_map(map: GameMap, start_pos: GamePosition) -> isize {
     let mut pos = Some(start_pos);
     let mut dir = N;
-    let mut visited = HashSet::from([start_pos]);
+    let mut loop_counter = 0;
 
     while let Some((x, y)) = pos {
         let (mut next_pos, mut next_field) = travel_one_unit(&map, &(x, y), &dir);
-        while next_field == FieldType::Occupied {
+        while next_field == Occupied {
             dir = DIRECTIONS[(DIRECTIONS.iter().position(|&d| d == dir).unwrap() + 1) % 4];
             (next_pos, next_field) = travel_one_unit(&map, &(x, y), &dir);
             // println!("Hit obstacle at ({x}, {y}) - changing dir to {:?}", dir);
@@ -103,27 +103,104 @@ fn traverse_map(map: GameMap, start_pos: GamePosition) -> isize {
         if next_field == Out {
             // println!("Leaving map on {:?}", next_pos);
             pos = None; // terminates while loop
-        } else {
+        } else { // next_field must be free
             pos = Some(next_pos);
-            visited.insert(next_pos);
+            loop_counter += 1;
         }
     }
 
-    visited.len() as isize
+    loop_counter
 }
 
+
+/// general strategy: read the map into a suitable data structure, walk the maze according to the
+/// navigation rules and count each visited field (no duplicates = hashset)
 pub fn solve_day_06_part_01(input: String) -> isize {
     let (map, start_pos) = parse_to_map(input);
     traverse_map(map, start_pos)
 }
 
-pub fn solve_day_06_part_02(input: Vec<String>) -> u32 {
-    todo!()
+/// checks if a map loops or not
+fn check_for_loop(map: &GameMap, mut pos: GamePosition, mut dir: Direction, mut visited: HashSet<(GamePosition, Direction)>) -> bool {
+    // println!("checking - loop at entry {:?}", pos);
+    loop {
+        let (mut next_pos, mut next_field) = travel_one_unit(&map, &pos, &dir);
+        while next_field == Occupied {
+            dir = DIRECTIONS[(DIRECTIONS.iter().position(|&d| d == dir).unwrap() + 1) % 4];
+            (next_pos, next_field) = travel_one_unit(&map, &pos, &dir);
+            // println!("Hit obstacle at ({x}, {y}) - changing dir to {:?}", dir);
+        }
+        if next_field == Out {
+            // println!("doesnt loop");
+            return false;
+        } else { // next_field must be free
+            pos = next_pos;
+
+            if visited.contains(&(next_pos, dir)) {
+                // println!("does loop");
+                return true;
+            } else {
+                visited.insert((next_pos, dir));
+            }
+        }
+    }
+}
+
+/// traverses the map while also evaluating if a new obstacle in front of the current pos would
+/// introduce a loop
+/// these obstacles can only be put on not traveled fields, since otherwise the traveled path would
+/// not be possible
+fn traverse_map_with_obstacle_loops(
+    map: GameMap,
+    start_pos: GamePosition,
+    mut visited: HashSet<(GamePosition, Direction)>,
+) -> usize {
+    let mut pos = Some(start_pos);
+    let mut dir = N;
+    let mut obstacles_for_loop = 0;
+    while let Some((x, y)) = pos {
+        let (mut next_pos, mut next_field) = travel_one_unit(&map, &(x, y), &dir);
+        while next_field == Occupied {
+            dir = DIRECTIONS[(DIRECTIONS.iter().position(|&d| d == dir).unwrap() + 1) % 4];
+            (next_pos, next_field) = travel_one_unit(&map, &(x, y), &dir);
+            // println!("Hit obstacle at ({x}, {y}) - changing dir to {:?}", dir);
+        }
+        if next_field == Out {
+            // println!("Leaving map on {:?}", next_pos);
+            pos = None; // terminates while loop
+        } else { // must be free
+            if !visited.iter().any(|f| f.0 == next_pos) {
+                let mut modified_map = map.clone();
+                modified_map.insert(next_pos, Occupied);
+                let visited_copy = visited.clone();
+                if check_for_loop(&modified_map, pos.unwrap(), dir, visited_copy) {
+                    obstacles_for_loop += 1;
+                }
+            }
+            // println!("at {:?}", next_pos);
+            pos = Some(next_pos);
+            visited.insert((next_pos, dir));
+        }
+    }
+    // println!("obstacles: {:?}", obstacles_for_loop);
+    obstacles_for_loop
+}
+
+/// general strategy: read the map into a suitable data structure, before walking it create a save-point
+/// now put an obstacle in front of you walk the modified map like in part 1 but record your every position
+/// incl. direction. Terminate the modified walk once you end up on a position with the same direction
+/// as you have already been on or if you leave the map. Count the loops (aka meeting your own path),
+/// jump back to the save-point walk one field forward and repeat the obstacle walk.
+/// do this until your non-obstacle walk leaves the map
+pub fn solve_day_06_part_02(input: String) -> usize {
+    let (map, start_pos) = parse_to_map(input);
+    let visited: HashSet<(GamePosition, Direction)> = HashSet::from([(start_pos, N)]);
+    traverse_map_with_obstacle_loops(map, start_pos, visited)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::day06::solve_day_06_part_01;
+    use crate::day06::{solve_day_06_part_01, solve_day_06_part_02};
     use crate::util::read_string;
 
     #[test]
@@ -154,6 +231,29 @@ mod tests {
 
     #[test]
     fn should_solve_day_06_part_02() {
-        todo!()
+        let input = read_string("./src/day06/input.txt").unwrap();
+
+        let solution = solve_day_06_part_02(input);
+
+        println!("{solution}");
+        assert_eq!(2262, solution);
+    }
+
+
+    #[test]
+    fn should_solve_day_06_part_02_sample() {
+        let input = "
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...".trim().to_string();
+
+        assert_eq!(6, solve_day_06_part_02(input));
     }
 }
