@@ -23,12 +23,16 @@ enum Direction {
     W,
 }
 
-const DIRECTIONS: [Direction; 4] = [
-    N,
-    W,
-    S,
-    E,
-];
+impl Direction {
+    fn next(&self) -> Direction {
+        match *self {
+            N => E,
+            E => S,
+            S => W,
+            W => N
+        }
+    }
+}
 
 type GameMap = HashMap<(isize, isize), FieldType>;
 type GamePosition = (isize, isize);
@@ -74,13 +78,13 @@ fn travel_one_unit(map: &GameMap, pos: &GamePosition, dir: &Direction) -> (GameP
             (x, y - 1)
         }
         E => {
-            (x - 1, y)
+            (x + 1, y)
         }
         S => {
             (x, y + 1)
         }
         W => {
-            (x + 1, y)
+            (x - 1, y)
         }
     };
     map.get(&next).map(|&field_type| (next, field_type)).unwrap_or((next, Out))
@@ -91,12 +95,12 @@ fn travel_one_unit(map: &GameMap, pos: &GamePosition, dir: &Direction) -> (GameP
 fn traverse_map(map: GameMap, start_pos: GamePosition) -> isize {
     let mut pos = Some(start_pos);
     let mut dir = N;
-    let mut loop_counter = 0;
+    let mut visited = HashSet::from([start_pos]);
 
     while let Some((x, y)) = pos {
         let (mut next_pos, mut next_field) = travel_one_unit(&map, &(x, y), &dir);
         while next_field == Occupied {
-            dir = DIRECTIONS[(DIRECTIONS.iter().position(|&d| d == dir).unwrap() + 1) % 4];
+            dir = dir.next();
             (next_pos, next_field) = travel_one_unit(&map, &(x, y), &dir);
             // println!("Hit obstacle at ({x}, {y}) - changing dir to {:?}", dir);
         }
@@ -105,11 +109,11 @@ fn traverse_map(map: GameMap, start_pos: GamePosition) -> isize {
             pos = None; // terminates while loop
         } else { // next_field must be free
             pos = Some(next_pos);
-            loop_counter += 1;
+            visited.insert(next_pos);
         }
     }
 
-    loop_counter
+    visited.len() as isize
 }
 
 
@@ -121,12 +125,17 @@ pub fn solve_day_06_part_01(input: String) -> isize {
 }
 
 /// checks if a map loops or not
-fn check_for_loop(map: &GameMap, mut pos: GamePosition, mut dir: Direction, mut visited: HashSet<(GamePosition, Direction)>) -> bool {
+fn check_for_loop(
+    map: &GameMap,
+    mut pos: GamePosition,
+    mut dir: Direction,
+    mut visited: HashSet<(GamePosition, Direction)>,
+) -> bool {
     // println!("checking - loop at entry {:?}", pos);
     loop {
         let (mut next_pos, mut next_field) = travel_one_unit(&map, &pos, &dir);
         while next_field == Occupied {
-            dir = DIRECTIONS[(DIRECTIONS.iter().position(|&d| d == dir).unwrap() + 1) % 4];
+            dir = dir.next();
             (next_pos, next_field) = travel_one_unit(&map, &pos, &dir);
             // println!("Hit obstacle at ({x}, {y}) - changing dir to {:?}", dir);
         }
@@ -151,7 +160,7 @@ fn check_for_loop(map: &GameMap, mut pos: GamePosition, mut dir: Direction, mut 
 /// these obstacles can only be put on not traveled fields, since otherwise the traveled path would
 /// not be possible
 fn traverse_map_with_obstacle_loops(
-    map: GameMap,
+    mut map: GameMap,
     start_pos: GamePosition,
     mut visited: HashSet<(GamePosition, Direction)>,
 ) -> usize {
@@ -161,7 +170,7 @@ fn traverse_map_with_obstacle_loops(
     while let Some((x, y)) = pos {
         let (mut next_pos, mut next_field) = travel_one_unit(&map, &(x, y), &dir);
         while next_field == Occupied {
-            dir = DIRECTIONS[(DIRECTIONS.iter().position(|&d| d == dir).unwrap() + 1) % 4];
+            dir = dir.next();
             (next_pos, next_field) = travel_one_unit(&map, &(x, y), &dir);
             // println!("Hit obstacle at ({x}, {y}) - changing dir to {:?}", dir);
         }
@@ -170,12 +179,13 @@ fn traverse_map_with_obstacle_loops(
             pos = None; // terminates while loop
         } else { // must be free
             if !visited.iter().any(|f| f.0 == next_pos) {
-                let mut modified_map = map.clone();
-                modified_map.insert(next_pos, Occupied);
+                // let mut modified_map = map.clone();
+                map.insert(next_pos, Occupied); // mutate instead of clone - perf. optimization
                 let visited_copy = visited.clone();
-                if check_for_loop(&modified_map, pos.unwrap(), dir, visited_copy) {
+                if check_for_loop(&map, pos.unwrap(), dir.next(), visited_copy) {
                     obstacles_for_loop += 1;
                 }
+                map.insert(next_pos, Free); // revert to original state - perf. optimization
             }
             // println!("at {:?}", next_pos);
             pos = Some(next_pos);
@@ -201,6 +211,7 @@ pub fn solve_day_06_part_02(input: String) -> usize {
 #[cfg(test)]
 mod tests {
     use crate::day06::{solve_day_06_part_01, solve_day_06_part_02};
+    use crate::day06::Direction::*;
     use crate::util::read_string;
 
     #[test]
@@ -210,6 +221,7 @@ mod tests {
         let solution = solve_day_06_part_01(input);
 
         println!("{solution}");
+        assert_eq!(5534, solution);
     }
 
     #[test]
@@ -230,13 +242,21 @@ mod tests {
     }
 
     #[test]
+    fn should_turn_90_degrees() {
+        assert_eq!(E, N.next());
+        assert_eq!(S, E.next());
+        assert_eq!(W, S.next());
+        assert_eq!(N, W.next());
+    }
+
+    #[test]
     fn should_solve_day_06_part_02() {
         let input = read_string("./src/day06/input.txt").unwrap();
 
         let solution = solve_day_06_part_02(input);
 
         println!("{solution}");
-        assert_eq!(2262, solution);
+        assert_eq!(2262, solution); // on avg ~ 6.7s before optimization
     }
 
 
