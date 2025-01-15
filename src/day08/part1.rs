@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::util::algebra::{cartesian_product_refs, mirror};
 
-fn parse_antennas(input: &str) -> Vec<Vec<(usize, usize)>> {
+pub fn parse_antennas(input: &str) -> Vec<Vec<(usize, usize)>> {
     input
         .lines()
         .enumerate()
@@ -55,6 +55,7 @@ mod tests {
         let input = read_string("./src/day08/input.txt").unwrap();
 
         let solution = solve_day_08_part_01(input);
+        println!("{solution}");
         assert_eq!(289, solution);
     }
 

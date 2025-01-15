@@ -55,6 +55,10 @@ pub fn mirror<T: Sub + Add>(p1: (T, T), p2: (T, T)) -> (T, T)
     (p2.0 + v.0, p2.1 + v.1)
 }
 
+pub fn apply_vec<T: Add>(p: (T, T), v: (T, T)) -> (T, T) where T: Add<Output=T> {
+    (p.0 + v.0, p.1 + v.1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,6 +72,14 @@ mod tests {
         assert_eq!((3, 3), get_vector_between(p1, p2));
         assert_eq!((-3, -3), get_vector_between(p2, p1));
         assert_eq!((2, 2), get_vector_between(p2, p3));
+    }
+
+    #[test]
+    fn should_apply_vec() {
+        let p1 = (5, 5);
+        let vec = (3, 3);
+
+        assert_eq!((8, 8), apply_vec(p1, vec));
     }
 
     #[test]
