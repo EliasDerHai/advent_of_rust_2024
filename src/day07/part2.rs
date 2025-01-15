@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::day07::part1::solve_day_07;
-    use crate::util::read_string;
+    use crate::util::file::read_string;
 
     #[test]
     fn should_solve_day_07_part_02() {

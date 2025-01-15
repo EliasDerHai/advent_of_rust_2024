@@ -1,7 +1,8 @@
 use criterion::{black_box, Criterion, criterion_group, criterion_main};
 
 use advent_of_rust_2024::day06::solve_day_06_part_02;
-use advent_of_rust_2024::util::{cartesian_product_flat_map, cartesian_product_mut_push, cartesian_product_refs, read_string};
+use advent_of_rust_2024::util::algebra::{cartesian_product_flat_map, cartesian_product_mut_push, cartesian_product_refs};
+use advent_of_rust_2024::util::file::read_string;
 
 fn bench_day06_part2(c: &mut Criterion) {
     let input = read_string("./src/day06/input.txt").unwrap();
@@ -47,7 +48,7 @@ fn bench_cartesian_product<F, I>(c: &mut Criterion, method_name: &str, func: F)
         b.iter(|| {
             let vec1_copy = vec1.clone();
             let vec2_copy = vec2.clone();
-            let count =  black_box(func(vec1_copy, vec2_copy).count());
+            let count = black_box(func(vec1_copy, vec2_copy).count());
             assert_eq!(10000 * 10000, count);
         });
     });

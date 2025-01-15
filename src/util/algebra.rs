@@ -1,36 +1,4 @@
-use std::fs::File;
-use std::io::{self, BufRead, Read};
-use std::path::Path;
-
-pub fn read_lines<P>(filename: P) -> io::Result<Vec<String>>
-    where
-        P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    let buf_reader = io::BufReader::new(file);
-    buf_reader.lines().collect()
-}
-
-pub fn read_chars<P>(filename: P) -> io::Result<impl Iterator<Item=char>>
-    where
-        P: AsRef<Path>,
-{
-    File::open(filename)
-        .map(|f| io::BufReader::new(f))
-        .map(|buf_reader| buf_reader.bytes()
-            .map(|byte| byte.unwrap() as char))
-}
-
-pub fn read_string<P>(filename: P) -> io::Result<String>
-    where
-        P: AsRef<Path>,
-{
-    let mut content = String::new();
-    let file = File::open(filename)?;
-    let mut buf_reader = io::BufReader::new(file);
-    buf_reader.read_to_string(&mut content)?;
-    Ok(content)
-}
+use std::ops::{Add, Sub};
 
 pub fn cartesian_product_flat_map<I, J, T>(iter1: I, iter2: J) -> impl Iterator<Item=(T, T)>
     where
@@ -55,9 +23,7 @@ pub fn cartesian_product_mut_push<I, J, T>(iter1: I, iter2: J) -> impl Iterator<
 {
     let vec1: Vec<T> = iter1.into_iter().collect();
     let vec2: Vec<T> = iter2.into_iter().collect();
-
-    let total_size = vec1.len().saturating_mul(vec2.len());
-    let mut result = Vec::with_capacity(total_size);
+    let mut result = Vec::new();
 
     for i in &vec1 {
         for j in &vec2 {
@@ -75,4 +41,43 @@ pub fn cartesian_product_refs<'a, T>(vec1: &'a [T], vec2: &'a [T])
     vec1.iter().flat_map(move |a| {
         vec2.iter().map(move |b| (a, b))
     })
+}
+
+pub fn get_vector_between<T: Sub>(p1: (T, T), p2: (T, T)) -> (T, T)
+    where T: Sub<Output=T> + Copy {
+    (p2.0 - p1.0, p2.1 - p1.1)
+}
+
+/// mirrors p1 on p2
+pub fn mirror<T: Sub + Add>(p1: (T, T), p2: (T, T)) -> (T, T)
+    where T: Sub<Output=T> + Add<Output=T> + Copy {
+    let v = get_vector_between(p1, p2);
+    (p2.0 + v.0, p2.1 + v.1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_get_vec_between_points() {
+        let p1 = (0, 0);
+        let p2 = (3, 3);
+        let p3 = (5, 5);
+
+        assert_eq!((3, 3), get_vector_between(p1, p2));
+        assert_eq!((-3, -3), get_vector_between(p2, p1));
+        assert_eq!((2, 2), get_vector_between(p2, p3));
+    }
+
+    #[test]
+    fn should_get_mirrored() {
+        let p1 = (0, 0);
+        let p2 = (3, 3);
+        let p3 = (1, 2);
+
+        assert_eq!((6, 6), mirror(p1, p2));
+        assert_eq!((2, 4), mirror(p1, p3));
+        assert_eq!((-1, 1), mirror(p2, p3));
+    }
 }

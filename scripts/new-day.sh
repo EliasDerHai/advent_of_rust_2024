@@ -16,7 +16,7 @@ pub fn solve_${FOLDER_SNAKE}_part_01(input: String) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::read_string;
+    use crate::util::file::read_string;
     use super::*;
 
     #[test]
@@ -44,7 +44,7 @@ pub fn solve_${FOLDER_SNAKE}_part_02(input: String) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::read_string;
+    use crate::util::file::read_string;
     use super::*;
 
     #[test]

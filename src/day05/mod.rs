@@ -95,7 +95,7 @@ pub fn solve_day_05_part_02(input: Vec<String>) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::read_lines;
+    use crate::util::file::read_lines;
 
     use super::*;
 

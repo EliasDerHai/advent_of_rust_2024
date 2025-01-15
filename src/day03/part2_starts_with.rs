@@ -35,7 +35,7 @@ pub fn solve_day_03_part_02_starts_with(mut input: &str) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::read_string;
+    use crate::util::file::read_string;
 
     use super::*;
 

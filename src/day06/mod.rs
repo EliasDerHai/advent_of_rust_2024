@@ -348,7 +348,7 @@ pub fn solve_day_06_part_02_fast(input: String) -> usize {
 mod tests {
     use crate::day06::{solve_day_06_part_01, solve_day_06_part_02_fast};
     use crate::day06::Direction::*;
-    use crate::util::read_string;
+    use crate::util::file::read_string;
 
     #[test]
     fn should_solve_day_06_part_01() {

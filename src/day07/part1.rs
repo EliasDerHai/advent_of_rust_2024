@@ -87,7 +87,7 @@ pub fn solve_day_07(input: String, include_concat: bool) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::read_string;
+    use crate::util::file::read_string;
 
     use super::*;
 

@@ -11,7 +11,7 @@ mod tests {
 
     use crate::day03::part2_starts_with::solve_day_03_part_02_starts_with;
     use crate::day03::part2_state_machine::solve_day_03_part_02_state_machine;
-    use crate::util::{read_chars, read_string};
+    use crate::util::file::{read_chars, read_string};
 
     /// used for debugging an issue in my state-machine
     #[test]

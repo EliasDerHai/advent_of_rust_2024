@@ -157,7 +157,7 @@ fn search_dir(letters: &HashMap<(isize, isize), char>, search_word: &str, x: isi
 #[cfg(test)]
 mod tests {
     use crate::day04::{solve_day_04_part_01, solve_day_04_part_02};
-    use crate::util::read_string;
+    use crate::util::file::read_string;
 
     #[test]
     fn should_solve_day_04_part_01_sample_0() {

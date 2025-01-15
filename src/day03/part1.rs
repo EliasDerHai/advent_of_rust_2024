@@ -146,7 +146,7 @@ pub fn solve_day_03_part_01(input: impl Iterator<Item=char>) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::{read_chars, read_lines};
+    use crate::util::file::{read_chars, read_lines};
 
     use super::*;
 

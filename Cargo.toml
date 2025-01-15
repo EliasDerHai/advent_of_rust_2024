@@ -10,6 +10,3 @@ criterion = "0.5.1"
 name = "bench"
 path = "benches/bench.rs"
 harness = false
-
-[profile.release]
-debug = true

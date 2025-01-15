@@ -197,7 +197,7 @@ pub fn solve_day_03_part_02_state_machine(input: impl Iterator<Item=char>) -> u3
 
 #[cfg(test)]
 mod tests {
-    use crate::util::read_chars;
+    use crate::util::file::read_chars;
 
     use super::*;
 

@@ -4,7 +4,7 @@ pub fn solve_day_08_part_02(input: String) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::read_string;
+    use crate::util::file::read_string;
 
     use super::*;
 
