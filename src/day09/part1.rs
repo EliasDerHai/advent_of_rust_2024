@@ -1,53 +1,90 @@
-use std::time::Instant;
+use std::iter::repeat;
+
+use crate::day09::part1::MemoryType::{Free, Occupied};
+
+#[derive(Debug, PartialEq, Default, Clone)]
+enum MemoryType {
+    #[default]
+    Free,
+    Occupied { file_id: usize },
+}
+
+#[derive(Debug, PartialEq, Default, Clone)]
+struct MemoryUnit {
+    pos: usize,
+    memory_type: MemoryType,
+}
+
+#[derive(Default, Debug, PartialEq)]
+struct Disk {
+    units: Vec<MemoryUnit>,
+}
+
+impl From<&str> for Disk {
+    fn from(value: &str) -> Self {
+        let mut disk = Disk::default();
+        value
+            .chars()
+            .enumerate()
+            .for_each(|(idx, c)| {
+                let length = c.to_digit(10).unwrap() as usize;
+                let is_file = idx % 2 == 0;
+                let next_unit = if is_file {
+                    MemoryUnit { pos: idx, memory_type: Occupied { file_id: idx / 2 } }
+                } else {
+                    MemoryUnit { pos: idx, memory_type: Free }
+                };
+                let mut next_chunk: Vec<MemoryUnit> = repeat(next_unit).take(length).collect();
+                disk.units.append(&mut next_chunk);
+            });
+
+        disk
+    }
+}
+
+impl Disk {
+    fn defrag(&mut self) -> () {
+        let mut left_index = 0;
+        let mut right_index = self.units.len() - 1;
+
+        while left_index < right_index {
+            let left = self.units.get(left_index).unwrap();
+            match left.memory_type {
+                Free => {}
+                Occupied { .. } => {
+                    left_index += 1;
+                    continue;
+                }
+            }
+
+            let right = self.units.get(right_index).unwrap();
+            match right.memory_type {
+                Free => {
+                    right_index -= 1;
+                    continue;
+                }
+                _ => {}
+            }
+
+            self.units.swap(left_index, right_index);
+            left_index += 1;
+            right_index -= 1;
+        }
+    }
+}
+
 
 pub fn solve_day_09_part_01(input: String) -> usize {
-    let mut unzipped = String::new();
-
-    let mut instant = Instant::now();
-    input.chars().enumerate().for_each(|(idx, c)| {
-        let length: usize = c.to_digit(10).unwrap() as usize;
-        let is_file = idx % 2 == 0;
-        let char_to_add = if is_file {
-            let content = (idx / 2) % 10; // 0 - 9
-            content.to_string().chars().next().unwrap()
-        } else {
-            '.'
-        };
-        let new: String = std::iter::repeat(char_to_add).take(length).collect();
-        unzipped.push_str(&new);
-    });
-
-    println!("unzipped: {unzipped} - {}ms", instant.elapsed().as_millis());
-    instant = Instant::now();
-
-    let mut left_index = 0;
-    let mut right_index = unzipped.len() - 1;
-    let unsorted: Vec<char> = unzipped.chars().collect();
-    while left_index < right_index {
-        let left = unsorted[left_index];
-        if left != '.' {
-            left_index += 1;
-            continue;
-        }
-        let right = unsorted[right_index];
-        if right == '.' {
-            right_index -= 1;
-            continue;
-        }
-
-        let bytes = unsafe { unzipped.as_bytes_mut() };
-        bytes.swap(left_index, right_index);
-        left_index += 1;
-        right_index -= 1;
-    }
-
-    println!("sorted: {unzipped} - {}ms", instant.elapsed().as_millis());
-
-    unzipped
-        .chars()
+    let mut disk = Disk::from(input.as_str());
+    disk.defrag();
+    disk.units.into_iter()
         .enumerate()
-        .filter(|(_, c)| c.is_digit(10))
-        .map(|(idx, c)| idx * (c.to_string().parse::<usize>().unwrap()))
+        .map(|(index, unit)| {
+            match unit.memory_type {
+                Occupied { file_id } => file_id * index,
+                Free => 0,
+            }
+        })
         .sum()
 }
 
@@ -64,7 +101,7 @@ mod tests {
         let solution = solve_day_09_part_01(input);
 
         println!("{solution}");
-        assert_eq!(5602033310, solution);
+        assert_eq!(6398608069280, solution);
     }
 
     #[test]
