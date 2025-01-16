@@ -21,7 +21,7 @@ struct Disk {
 }
 
 impl From<&str> for Disk {
-    fn from(value: &str) -> Self {
+    fn from(value: &str) -> Self { // can be called from outside
         let mut disk = Disk::default();
         value
             .chars()
@@ -43,7 +43,7 @@ impl From<&str> for Disk {
 }
 
 impl Disk {
-    fn defrag(&mut self) -> () {
+    fn fragment(&mut self) -> &mut Self {
         let mut left_index = 0;
         let mut right_index = self.units.len() - 1;
 
@@ -70,22 +70,27 @@ impl Disk {
             left_index += 1;
             right_index -= 1;
         }
+
+        self
+    }
+
+   fn checksum(&self) -> usize {
+        self.units.iter().enumerate()
+            .map(|(index, unit)| {
+                match unit.memory_type {
+                    Occupied { file_id } => file_id * index,
+                    Free => 0,
+                }
+            })
+            .sum()
     }
 }
 
 
 pub fn solve_day_09_part_01(input: String) -> usize {
-    let mut disk = Disk::from(input.as_str());
-    disk.defrag();
-    disk.units.into_iter()
-        .enumerate()
-        .map(|(index, unit)| {
-            match unit.memory_type {
-                Occupied { file_id } => file_id * index,
-                Free => 0,
-            }
-        })
-        .sum()
+    Disk::from(input.as_str())
+        .fragment()
+        .checksum()
 }
 
 #[cfg(test)]
