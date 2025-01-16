@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-struct Point {
+pub struct Point {
     x: u8,
     y: u8,
 }
@@ -11,6 +11,7 @@ impl Point {
     fn new(x: u8, y: u8) -> Self {
         Point { x, y }
     }
+
     fn left(&self) -> Point {
         let next_x = if self.x == 0 {
             u8::MAX
@@ -45,7 +46,7 @@ impl Display for Point {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-struct Altitude(u8);
+pub struct Altitude(u8);
 
 impl Display for Altitude {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -68,14 +69,14 @@ impl Altitude {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-struct Trail {
+pub struct Trail {
     start: Point,
     curr_pos: Point,
     curr_alt: Altitude,
 }
 
 impl Trail {
-    fn new(start: Point) -> Self {
+    pub(crate) fn new(start: Point) -> Self {
         Trail {
             start,
             curr_pos: start,
@@ -91,12 +92,12 @@ impl Trail {
         }
     }
 
-    fn is_completed(&self) -> bool {
+    pub(crate) fn is_completed(&self) -> bool {
         self.curr_alt.is_trail_goal()
     }
 }
 
-struct TopographicMap {
+pub struct TopographicMap {
     map: HashMap<Point, Altitude>,
 }
 
@@ -125,12 +126,12 @@ impl From<&str> for TopographicMap {
 }
 
 impl TopographicMap {
-    fn starting_points(&self) -> Vec<(&Point, &Altitude)> {
+    pub fn starting_points(&self) -> Vec<(&Point, &Altitude)> {
         self.map.iter().filter(|(_p, a)| a.is_trail_head()).collect()
     }
 
     fn traverse(&self) -> usize {
-        let mut open: HashSet<Trail> = self // now a HashSet
+        let mut open: HashSet<Trail> = self
             .starting_points()
             .into_iter()
             .map(|(&p, _)| Trail::new(p))
@@ -146,7 +147,7 @@ impl TopographicMap {
         open.len()
     }
 
-    fn travel_adjacent(&self, trail: Trail) -> Vec<Trail> {
+    pub fn travel_adjacent(&self, trail: Trail) -> Vec<Trail> {
         let p = trail.curr_pos;
         vec![p.left(), p.right(), p.up(), p.down()]
             .into_iter()
