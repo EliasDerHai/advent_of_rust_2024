@@ -1,49 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Point {
-    x: u8,
-    y: u8,
-}
-
-impl Point {
-    fn new(x: u8, y: u8) -> Self {
-        Point { x, y }
-    }
-
-    fn left(&self) -> Point {
-        let next_x = if self.x == 0 {
-            u8::MAX
-        } else {
-            &self.x - 1
-        };
-        Point { x: next_x, y: self.y }
-    }
-
-    fn up(&self) -> Point {
-        let next_y = if self.y == 0 {
-            u8::MAX
-        } else {
-            &self.y - 1
-        };
-        Point { x: self.x, y: next_y }
-    }
-
-    fn right(&self) -> Point {
-        Point { x: self.x + 1, y: self.y }
-    }
-
-    fn down(&self) -> Point {
-        Point { x: self.x, y: self.y + 1 }
-    }
-}
-
-impl Display for Point {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", &self.x, &self.y)
-    }
-}
+use crate::util::point::Point;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Altitude(u8);
