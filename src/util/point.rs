@@ -1,35 +1,24 @@
 use std::fmt::{Display, Formatter};
 
-/// a point (u8, u8) with some convenience
-/// `left` and `up` might return (u8::max, u8::max) point if overflow
+/// a point (i16, i16) with some convenience
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Point {
-    x: u8,
-    y: u8,
+    pub(crate) x: i16,
+    pub(crate) y: i16,
 }
 
 impl Point {
-    pub fn new(x: u8, y: u8) -> Self {
+    pub fn new(x: i16, y: i16) -> Self {
         Point { x, y }
     }
 
 
     pub fn left(&self) -> Point {
-        let next_x = if self.x == 0 {
-            u8::MAX
-        } else {
-            &self.x - 1
-        };
-        Point { x: next_x, y: self.y }
+        Point { x: self.x - 1, y: self.y }
     }
 
     pub fn up(&self) -> Point {
-        let next_y = if self.y == 0 {
-            u8::MAX
-        } else {
-            &self.y - 1
-        };
-        Point { x: self.x, y: next_y }
+        Point { x: self.x, y: self.y - 1 }
     }
 
     pub fn right(&self) -> Point {
@@ -48,11 +37,11 @@ impl Display for Point {
 }
 
 
-impl From<&(u8, u8)> for Point{
-    fn from(value: &(u8, u8)) -> Self {
+impl From<&(i16, i16)> for Point {
+    fn from(value: &(i16, i16)) -> Self {
         Point {
             x: value.0,
-            y: value.1
+            y: value.1,
         }
     }
 }

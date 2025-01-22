@@ -5,9 +5,10 @@ use crate::util::grid::CharGrid;
 use crate::util::point::Point;
 
 #[derive(Debug)]
-struct Region {
-    token: char,
-    area: HashSet<Point>,
+pub struct Region {
+    pub(crate) token: char,
+    pub(crate) area: HashSet<Point>,
+    // pub(crate) edges: HashSet<Point>,
 }
 
 impl Region {
@@ -15,34 +16,32 @@ impl Region {
         Region {
             token: c,
             area: HashSet::new(),
+            // edges: HashSet::new(),
         }
     }
 
     fn get_perimeter(&self, grid: &CharGrid) -> usize {
-        let per: Vec<usize> = self.area
+        self.area
             .iter()
             .map(|p| {
-                let x = grid.neighbors_incl_outs(p)
+                grid.neighbors_incl_outs(p)
                     .filter(|(_, nc)| *nc != self.token)
                     .map(|tuple| {
                         tuple
                     })
-                    .count();
-                x
-            }).collect();
-
-        let x = per.iter().sum();
-        x
+                    .count()
+            })
+            .sum()
     }
 
-    fn get_area(&self) -> usize {
+    pub(crate) fn get_area(&self) -> usize {
         self.area.len()
     }
 }
 
 impl CharGrid {
     pub fn neighbors_incl_outs<'a>(&'a self, p: &'a Point)
-                                   -> impl Iterator<Item = (Point, char)> + 'a {
+                                   -> impl Iterator<Item=(Point, char)> + 'a {
         [p.left(), p.right(), p.up(), p.down()]
             .into_iter()
             .map(|n| {
@@ -52,7 +51,7 @@ impl CharGrid {
     }
 }
 
-fn get_regions(grid: &CharGrid) -> Vec<Region> {
+pub fn get_regions(grid: &CharGrid) -> Vec<Region> {
     let mut indexed: HashSet<Point> = HashSet::new();
     let mut regions: Vec<Region> = Vec::new();
 
@@ -69,10 +68,16 @@ fn get_regions(grid: &CharGrid) -> Vec<Region> {
             next_region.area.insert(curr);
             if indexed.contains(&curr) { continue; }
             indexed.insert(curr);
-            grid.neighbors(&curr)
-                .filter(|(p, c)| *c == next_region.token && !indexed.contains(p))
-                .map(|(p, _)| p)
-                .for_each(|p| queue.push_back(p));
+            grid.neighbors_incl_outs(&curr)
+                .for_each(|(p, c)| {
+                    let is_part_of_region = c == next_region.token;
+
+                    if !is_part_of_region {
+                        // next_region.edges.insert(curr);
+                    } else if !indexed.contains(&p) {
+                        queue.push_back(p);
+                    }
+                });
         }
 
         regions.push(next_region);

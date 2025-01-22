@@ -1,7 +1,20 @@
 use std::collections::hash_map::IntoIter;
 use std::collections::HashMap;
 
+use crate::util::grid::Direction::*;
 use crate::util::point::Point;
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Direction {
+    N,
+    NE,
+    E,
+    SE,
+    S,
+    SW,
+    W,
+    NW,
+}
 
 #[derive(Debug)]
 pub struct CharGrid {
@@ -20,7 +33,7 @@ impl From<&str> for CharGrid {
                     .enumerate()
                     .map(move |(x, c)|
                         {
-                            let p = Point::new(x as u8, y as u8);
+                            let p = Point::new(x as i16, y as i16);
                             (p, c)
                         }
                     )
@@ -49,7 +62,7 @@ impl CharGrid {
     }
 
     pub fn neighbors<'a>(&'a self, p: &'a Point)
-                                   -> impl Iterator<Item = (Point, char)> + 'a {
+                         -> impl Iterator<Item=(Point, char)> + 'a {
         [p.left(), p.right(), p.up(), p.down()]
             .into_iter()
             .map(|n| (n, self.get(&n)))
