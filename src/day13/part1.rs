@@ -100,6 +100,7 @@ pub fn solve_day_13_part_01(input: &str) -> u128 {
     tokens
 }
 
+/// best explanation https://www.purplemath.com/modules/cramers.htm
 pub(crate) fn cramer_integer_solve(
     ax: i128,
     ay: i128,

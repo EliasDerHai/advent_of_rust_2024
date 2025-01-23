@@ -8,7 +8,6 @@ use crate::util::point::Point;
 pub struct Region {
     pub(crate) token: char,
     pub(crate) area: HashSet<Point>,
-    // pub(crate) edges: HashSet<Point>,
 }
 
 impl Region {
@@ -16,7 +15,6 @@ impl Region {
         Region {
             token: c,
             area: HashSet::new(),
-            // edges: HashSet::new(),
         }
     }
 
@@ -73,7 +71,6 @@ pub fn get_regions(grid: &CharGrid) -> Vec<Region> {
                     let is_part_of_region = c == next_region.token;
 
                     if !is_part_of_region {
-                        // next_region.edges.insert(curr);
                     } else if !indexed.contains(&p) {
                         queue.push_back(p);
                     }
