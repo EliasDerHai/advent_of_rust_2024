@@ -3,7 +3,6 @@ use std::time::Instant;
 
 use crate::day12::part1::get_regions;
 use crate::util::grid::CharGrid;
-use crate::util::grid::Direction::*;
 use crate::util::point::Point;
 
 pub fn solve_day_12_part_02(input: &str) -> usize {

@@ -1,14 +1,15 @@
 use std::fmt::{Display, Formatter};
+use std::ops::{Add, Sub};
 
-/// a point (i16, i16) with some convenience
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+/// a point (i32, i32) with some convenience
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Point {
-    pub(crate) x: i16,
-    pub(crate) y: i16,
+    pub(crate) x: i32,
+    pub(crate) y: i32,
 }
 
 impl Point {
-    pub fn new(x: i16, y: i16) -> Self {
+    pub fn new(x: i32, y: i32) -> Self {
         Point { x, y }
     }
 
@@ -36,9 +37,25 @@ impl Display for Point {
     }
 }
 
+impl Add for Point {
+    type Output = Point;
 
-impl From<&(i16, i16)> for Point {
-    fn from(value: &(i16, i16)) -> Self {
+    fn add(self, rhs: Self) -> Self::Output {
+        Point::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
+
+impl Sub for Point {
+    type Output = Point;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Point::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
+impl From<&(i32, i32)> for Point {
+    fn from(value: &(i32, i32)) -> Self {
         Point {
             x: value.0,
             y: value.1,

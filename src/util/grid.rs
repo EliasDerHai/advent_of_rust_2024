@@ -1,7 +1,6 @@
 use std::collections::hash_map::IntoIter;
 use std::collections::HashMap;
 
-use crate::util::grid::Direction::*;
 use crate::util::point::Point;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -33,7 +32,7 @@ impl From<&str> for CharGrid {
                     .enumerate()
                     .map(move |(x, c)|
                         {
-                            let p = Point::new(x as i16, y as i16);
+                            let p = Point::new(x as i32, y as i32);
                             (p, c)
                         }
                     )
