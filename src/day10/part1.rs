@@ -72,7 +72,7 @@ impl From<&str> for TopographicMap {
                     .enumerate()
                     .map(move |(x, c)|
                         {
-                            let p = Point::new(x as i32, y as i32);
+                            let p = Point::new(x as i128, y as i128);
                             let height = c.to_digit(10).unwrap_or(11) as u8;
                             (p, Altitude(height))
                         }

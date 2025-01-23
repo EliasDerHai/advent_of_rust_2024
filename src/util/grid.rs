@@ -32,7 +32,7 @@ impl From<&str> for CharGrid {
                     .enumerate()
                     .map(move |(x, c)|
                         {
-                            let p = Point::new(x as i32, y as i32);
+                            let p = Point::new(x as i128, y as i128);
                             (p, c)
                         }
                     )

@@ -1,26 +1,26 @@
 use crate::util::point::Point;
 
 #[derive(Debug)]
-struct Arcade {
-    machines: Vec<ClawMachine>,
+pub(crate) struct Arcade {
+    pub(crate) machines: Vec<ClawMachine>,
 }
 
 #[derive(Debug, Default)]
-struct ClawMachine {
+pub(crate) struct ClawMachine {
     // fixed cost of 3
-    a: ButtonBehavior,
+    pub(crate) a: ButtonBehavior,
     // fixed cost of 1
-    b: ButtonBehavior,
+    pub(crate) b: ButtonBehavior,
     // must match exactly
-    prize_location: Point,
+    pub(crate) prize_location: Point,
 }
 
 #[derive(Debug, Default, Clone)]
-struct ButtonBehavior {
+pub(crate) struct ButtonBehavior {
     // add to x per button press
-    x: i32,
+    pub(crate) x: i32,
     // add to y per button press
-    y: i32,
+    pub(crate) y: i32,
 }
 
 impl From<&str> for Arcade {
@@ -58,7 +58,7 @@ impl From<&str> for Arcade {
             if line.starts_with(PRICE_PREFIX) {
                 let mut numbers = line[PRICE_PREFIX.len()..]
                     .split(PRICE_SPLITTER)
-                    .map(|n| n.parse::<i32>().expect("NaN"));
+                    .map(|n| n.parse::<i128>().expect("NaN"));
                 let price_location = Point::new(
                     numbers.next().expect("Should have X"),
                     numbers.next().expect("Should have Y"),
@@ -78,83 +78,45 @@ impl From<&str> for Arcade {
     }
 }
 
-#[derive(Debug, Clone)]
-struct Step<'a> {
-    a: &'a ButtonBehavior,
-    a_press_count: u8,
-    b: &'a ButtonBehavior,
-    b_press_count: u8,
-    current_position: Point,
-}
-
-impl Step<'_> {
-    /// runtime explodes (O^2) in iterative approach
-    /// needs to be done mathematically
-    /// (Cramer's rule https://en.wikipedia.org/wiki/Cramer%27s_rule) - but fuck this shit I'm done with AOC
-    fn traverse(&mut self, solutions: &mut Vec<u32>) {
-        {
-            let mut next_a = self.clone();
-            next_a.press(self.a.x, self.a.y, true);
-            if next_a.is_success() {
-                solutions.push(next_a.a_press_count as u32 * 3 + next_a.b_press_count as u32);
-            } else if !next_a.is_failed() {
-                next_a.traverse(solutions);
-            }
-        }
-        {
-            let next_b = self;
-            next_b.press(next_b.b.x, next_b.b.y, true);
-            if next_b.is_success() {
-                solutions.push(next_b.a_press_count as u32 * 3 + next_b.b_press_count as u32);
-            } else if !next_b.is_failed() {
-                next_b.traverse(solutions);
-            }
-        }
-    }
-
-    fn press(&mut self, x: i32, y: i32, is_a: bool) {
-        self.current_position.x -= x;
-        self.current_position.y -= y;
-        if is_a {
-            self.a_press_count += 1;
-        } else {
-            self.b_press_count += 1;
-        }
-    }
-
-    fn is_success(&self) -> bool {
-        self.current_position == Point::new(0, 0)
-    }
-
-    fn is_failed(&self) -> bool {
-        self.current_position.x < 0 || self.current_position.y < 0 || self.a_press_count > 100 || self.b_press_count > 100
-    }
-}
-
-fn attempt_solve(machine: ClawMachine) -> Option<u32> {
-    let mut first_step = Step {
-        a: &machine.a,
-        a_press_count: 0,
-        b: &machine.b,
-        b_press_count: 0,
-        current_position: machine.prize_location.clone(),
-    };
-
-    let mut solutions: Vec<u32> = Vec::new();
-    first_step.traverse(&mut solutions);
-
-    solutions
-        .iter()
-        .min()
-        .map(|v| *v)
-}
-
-pub fn solve_day_13_part_01(input: &str) -> u32 {
+pub fn solve_day_13_part_01(input: &str) -> u128 {
     let arcade = Arcade::from(input);
-    arcade.machines
-        .into_iter()
-        .filter_map(|machine| attempt_solve(machine))
-        .sum()
+    let mut tokens = 0;
+
+    for machine in arcade.machines {
+        if let Some((a_presses, b_presses)) = cramer_integer_solve(
+            machine.a.x as i128,
+            machine.a.y as i128,
+            machine.b.x as i128,
+            machine.b.y as i128,
+            machine.prize_location.x as i128,
+            machine.prize_location.y as i128,
+        ) {
+            if a_presses >= 0 && b_presses >= 0 {
+                tokens += a_presses as u128 * 3 + b_presses as u128;
+            }
+        }
+    }
+
+    tokens
+}
+
+pub(crate) fn cramer_integer_solve(
+    ax: i128,
+    ay: i128,
+    bx: i128,
+    by: i128,
+    px: i128,
+    py: i128,
+) -> Option<(i128, i128)> {
+    let det = ax * by - ay * bx;
+    let det_sub_a = px * by - py * bx;
+    let det_sub_b = ax * py - ay * px;
+
+    if det == 0 || det_sub_a % det != 0 || det_sub_b % det != 0 {
+        None
+    } else {
+        Some((det_sub_a / det, det_sub_b / det))
+    }
 }
 
 #[cfg(test)]
@@ -191,8 +153,6 @@ mod tests {
         Button B: X+27, Y+71
         Prize: X=18641, Y=10279
         ";
-
-        println!("{:?}", Arcade::from(input));
 
         assert_eq!(480, solve_day_13_part_01(input));
     }
