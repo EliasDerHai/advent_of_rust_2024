@@ -1,15 +1,15 @@
 #!/bin/bash
 
-SRC_DIR="../src"
-
+REPO_ROOT=$(git rev-parse --show-toplevel)
 FOLDER_NAME=${1:-$(read -p "Enter the name of the new day folder (e.g., day02): " && echo "$REPLY")}
-
 FOLDER_SNAKE=${FOLDER_NAME//day/day_}
+FOLDER_PATH=${REPO_ROOT}/src/${FOLDER_NAME}
 
-mkdir -p "$SRC_DIR/$FOLDER_NAME"
-touch "$SRC_DIR/$FOLDER_NAME/input.txt"
+cd "$REPO_ROOT" || exit 1
+mkdir -p "$FOLDER_PATH"
+touch "$FOLDER_PATH/input.txt"
 
-cat > "$SRC_DIR/$FOLDER_NAME/part1.rs" <<EOF
+cat > "$FOLDER_PATH/part1.rs" <<EOF
 pub fn solve_${FOLDER_SNAKE}_part_01(input: &str) -> u32 {
     todo!()
 }
@@ -37,7 +37,7 @@ mod tests {
 }
 EOF
 
-cat > "$SRC_DIR/$FOLDER_NAME/part2.rs" <<EOF
+cat > "$FOLDER_PATH/part2.rs" <<EOF
 pub fn solve_${FOLDER_SNAKE}_part_02(input: &str) -> u32 {
     todo!()
 }
@@ -66,10 +66,10 @@ mod tests {
 }
 EOF
 
-cat > "$SRC_DIR/$FOLDER_NAME/mod.rs" <<EOF
+cat > "$FOLDER_PATH/mod.rs" <<EOF
 pub mod part1;
 pub mod part2;
 EOF
 
-echo "Created new day directory: $SRC_DIR/$FOLDER_NAME"
+echo "Created new day directory: $FOLDER_PATH"
 read
