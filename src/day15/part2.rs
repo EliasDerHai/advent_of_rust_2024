@@ -1,3 +1,4 @@
+#![allow(unused_variables, dead_code)]
 pub fn solve_day_15_part_02(input: &str) -> u32 {
     todo!()
 }

@@ -8,6 +8,7 @@ use std::path::Path;
 const WIDTH: usize = 101;
 const HEIGHT: usize = 103;
 
+#[allow(dead_code)]
 fn write_to_std_out(iteration: usize, points: &Vec<Point>) {
     let mut display: [[bool; WIDTH]; HEIGHT] = [[false; WIDTH]; HEIGHT];
 
@@ -26,6 +27,7 @@ fn write_to_std_out(iteration: usize, points: &Vec<Point>) {
         .for_each(|line| println!("{line}"));
 }
 
+#[allow(dead_code)]
 fn save_to_ppm(iteration: usize, points: &Vec<Point>) {
     let mut display: [[bool; WIDTH]; HEIGHT] = [[false; WIDTH]; HEIGHT];
 

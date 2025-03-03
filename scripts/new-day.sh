@@ -10,6 +10,7 @@ mkdir -p "$FOLDER_PATH"
 touch "$FOLDER_PATH/input.txt"
 
 cat > "$FOLDER_PATH/part1.rs" <<EOF
+#![allow(unused_variables, dead_code)]
 pub fn solve_${FOLDER_SNAKE}_part_01(input: &str) -> u32 {
     todo!()
 }
@@ -38,6 +39,7 @@ mod tests {
 EOF
 
 cat > "$FOLDER_PATH/part2.rs" <<EOF
+#![allow(unused_variables, dead_code)]
 pub fn solve_${FOLDER_SNAKE}_part_02(input: &str) -> u32 {
     todo!()
 }
@@ -70,6 +72,8 @@ cat > "$FOLDER_PATH/mod.rs" <<EOF
 pub mod part1;
 pub mod part2;
 EOF
+
+# todo append mod to lib.rs
 
 echo "Created new day directory: $FOLDER_PATH"
 read

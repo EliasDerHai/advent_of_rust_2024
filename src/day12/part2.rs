@@ -2,11 +2,11 @@ use std::collections::HashSet;
 use std::time::Instant;
 
 use crate::day12::part1::get_regions;
-use crate::util::grid::CharGrid;
+use crate::util::grid::Grid;
 use crate::util::point::Point;
 
 pub fn solve_day_12_part_02(input: &str) -> usize {
-    let grid = CharGrid::from(input);
+    let grid = Grid::from(input);
 
     let i = Instant::now();
     let regions = get_regions(&grid);
@@ -27,7 +27,7 @@ pub fn solve_day_12_part_02(input: &str) -> usize {
     c
 }
 
-fn get_edge_count(own: char, edge_points: &HashSet<Point>, grid: &CharGrid) -> usize {
+fn get_edge_count(own: char, edge_points: &HashSet<Point>, grid: &Grid<char>) -> usize {
     edge_points
         .iter()
         .map(|e| {

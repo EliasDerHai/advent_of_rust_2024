@@ -1,7 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::time::Instant;
 
-use crate::util::grid::CharGrid;
+use crate::util::grid::Grid;
 use crate::util::point::Point;
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ impl Region {
         }
     }
 
-    fn get_perimeter(&self, grid: &CharGrid) -> usize {
+    fn get_perimeter(&self, grid: &Grid<char>) -> usize {
         self.area
             .iter()
             .map(|p| {
@@ -37,7 +37,7 @@ impl Region {
     }
 }
 
-impl CharGrid {
+impl Grid<char> {
     pub fn neighbors_incl_outs<'a>(&'a self, p: &'a Point)
                                    -> impl Iterator<Item=(Point, char)> + 'a {
         [p.left(), p.right(), p.up(), p.down()]
@@ -49,7 +49,7 @@ impl CharGrid {
     }
 }
 
-pub fn get_regions(grid: &CharGrid) -> Vec<Region> {
+pub fn get_regions(grid: &Grid<char>) -> Vec<Region> {
     let mut indexed: HashSet<Point> = HashSet::new();
     let mut regions: Vec<Region> = Vec::new();
 
@@ -83,7 +83,7 @@ pub fn get_regions(grid: &CharGrid) -> Vec<Region> {
 }
 
 pub fn solve_day_12_part_01(input: &str) -> usize {
-    let grid = CharGrid::from(input);
+    let grid = Grid::from(input);
 
     let i = Instant::now();
     let regions = get_regions(&grid);

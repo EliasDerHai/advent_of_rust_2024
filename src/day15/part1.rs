@@ -1,4 +1,5 @@
-use crate::util::grid::{CharGrid, Direction};
+#![allow(unused_variables, dead_code)]
+use crate::util::grid::{Grid, Direction};
 
 struct WarehouseMap {
 
@@ -6,10 +7,10 @@ struct WarehouseMap {
 
 type RobotMoveInstruction = Direction;
 
-fn parse(input: &str) -> (CharGrid, Vec<Direction>) {
+fn parse(input: &str) -> (Grid<char>, Vec<Direction>) {
     let (warehouse, instructions) = input.split_once("\n\n").unwrap();
 
-    let warehouse = CharGrid::from(warehouse);
+    let warehouse = Grid::from(warehouse);
     let instructions = instructions.chars().filter_map(|c| match c {
         '>' => Some(Direction::E),
         '<' => Some(Direction::W),
