@@ -1,13 +1,13 @@
 use crate::util::point::Point;
 
 #[derive(Debug, Clone, PartialEq)]
-struct Robot {
+pub(crate) struct Robot {
     start_pos: Point,
     velocity: Point,
 }
 
 impl Robot {
-    fn project_pos(&self, iterations: usize, canvas_width: usize, canvas_height: usize) -> Point {
+    pub(crate) fn project_pos(&self, iterations: usize, canvas_width: usize, canvas_height: usize) -> Point {
         let raw = self.start_pos + (self.velocity * iterations);
         let bounded_x = raw.x.rem_euclid(canvas_width as i128);
         let bounded_y = raw.y.rem_euclid(canvas_height as i128);
@@ -23,10 +23,10 @@ impl Robot {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Lobby {
-    width: usize,
-    height: usize,
-    robots: Vec<Robot>,
+pub(crate) struct Lobby {
+    pub(crate) width: usize,
+    pub(crate) height: usize,
+    pub(crate) robots: Vec<Robot>,
 }
 impl TryFrom<(&str, usize, usize)> for Lobby {
     type Error = String;
