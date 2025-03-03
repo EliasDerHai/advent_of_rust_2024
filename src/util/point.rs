@@ -1,5 +1,5 @@
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, Sub};
+use std::ops::{Add, Mul, Sub};
 
 /// a point (u128, u128) with some convenience
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
@@ -51,6 +51,14 @@ impl Sub for Point {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Point::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
+impl Mul<usize> for Point {
+    type Output = Point;
+
+    fn mul(self, rhs: usize) -> Self::Output {
+        Point::new(self.x * rhs as i128, self.y * rhs as i128)
     }
 }
 
