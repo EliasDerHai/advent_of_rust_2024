@@ -1,7 +1,8 @@
+use crate::util::grid::Direction;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul, Sub};
 
-/// a point (u128, u128) with some convenience
+/// a point (i128, i128) with some convenience
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Point {
     pub(crate) x: i128,
@@ -13,21 +14,32 @@ impl Point {
         Point { x, y }
     }
 
-
     pub fn left(&self) -> Point {
-        Point { x: self.x - 1, y: self.y }
+        Point {
+            x: self.x - 1,
+            y: self.y,
+        }
     }
 
     pub fn up(&self) -> Point {
-        Point { x: self.x, y: self.y - 1 }
+        Point {
+            x: self.x,
+            y: self.y - 1,
+        }
     }
 
     pub fn right(&self) -> Point {
-        Point { x: self.x + 1, y: self.y }
+        Point {
+            x: self.x + 1,
+            y: self.y,
+        }
     }
 
     pub fn down(&self) -> Point {
-        Point { x: self.x, y: self.y + 1 }
+        Point {
+            x: self.x,
+            y: self.y + 1,
+        }
     }
 }
 
@@ -37,7 +49,7 @@ impl Display for Point {
     }
 }
 
-impl Add for Point {
+impl Add<Point> for Point {
     type Output = Point;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -45,6 +57,22 @@ impl Add for Point {
     }
 }
 
+impl Add<Direction> for Point {
+    type Output = Point;
+
+    fn add(self, rhs: Direction) -> Self::Output {
+        match rhs {
+            Direction::N => self.up(),
+            Direction::NE => self.up().right(),
+            Direction::E => self.right(),
+            Direction::SE => self.down().right(),
+            Direction::S => self.down(),
+            Direction::SW => self.down().left(),
+            Direction::W => self.left(),
+            Direction::NW => self.up().left(),
+        }
+    }
+}
 
 impl Sub for Point {
     type Output = Point;
@@ -70,4 +98,3 @@ impl From<&(u128, u128)> for Point {
         }
     }
 }
-

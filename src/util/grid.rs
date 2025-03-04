@@ -15,7 +15,7 @@ pub enum Direction {
     NW,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Grid<T> {
     map: HashMap<Point, T>,
 }
@@ -46,7 +46,7 @@ impl<T> IntoIterator for Grid<T> {
     }
 }
 
-impl<T: Clone> Grid<T> {
+impl<T> Grid<T> {
     pub fn iter(&self) -> impl Iterator<Item = (&Point, &T)> {
         self.map.iter()
     }
@@ -55,11 +55,15 @@ impl<T: Clone> Grid<T> {
         self.map.get(p)
     }
 
-    pub fn neighbors<'a>(&'a self, p: &'a Point) -> impl Iterator<Item = (Point, T)> + 'a {
+    pub fn set(&mut self, p: Point, value: T) {
+        self.map.insert(p, value);
+    }
+
+    pub fn neighbors(&self, p: &Point) -> impl Iterator<Item = (Point, &T)> {
         [p.left(), p.right(), p.up(), p.down()]
             .into_iter()
             .map(|n| (n, self.get(&n)))
-            .filter_map(|(n, c)| c.map(|inner_c| (n, (*inner_c).clone())))
+            .filter_map(|(n, c)| c.map(|inner_c| (n, inner_c)))
     }
 
     pub fn map<F, U>(self, mut map_fn: F) -> Grid<U>
