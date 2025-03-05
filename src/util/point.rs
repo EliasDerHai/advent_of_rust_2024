@@ -2,7 +2,9 @@ use crate::util::grid::Direction;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul, Sub};
 
-/// a point (i128, i128) with some convenience
+/// a point (i128, i128) with some convenience - has evolved to be more of a Vec2 but often semantically a Point
+/// ... could probably be refactored into a proper distinction between Point and Vec2,
+/// but I guess as long as I can solve the aoc I will just keep on going
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Point {
     pub(crate) x: i128,
@@ -57,6 +59,14 @@ impl Add<Point> for Point {
     }
 }
 
+impl Add<(usize, usize)> for Point {
+    type Output = Point;
+
+    fn add(self, rhs: (usize, usize)) -> Self::Output {
+        Point::new(self.x + rhs.0 as i128, self.y + rhs.1 as i128)
+    }
+}
+
 impl Add<Direction> for Point {
     type Output = Point;
 
@@ -87,6 +97,14 @@ impl Mul<usize> for Point {
 
     fn mul(self, rhs: usize) -> Self::Output {
         Point::new(self.x * rhs as i128, self.y * rhs as i128)
+    }
+}
+
+impl Mul<(usize, usize)> for Point {
+    type Output = Point;
+
+    fn mul(self, rhs: (usize, usize)) -> Self::Output {
+        Point::new(self.x * rhs.0 as i128, self.y * rhs.1 as i128)
     }
 }
 

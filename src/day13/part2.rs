@@ -45,7 +45,7 @@ impl Arcade {
                 machines.push(ClawMachine {
                     a: a.clone(),
                     b: b.clone(),
-                    prize_location: price_location + Point::new(10000000000000, 10000000000000),
+                    prize_location: price_location + (10000000000000, 10000000000000),
                 })
             }
         }

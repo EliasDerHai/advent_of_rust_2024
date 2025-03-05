@@ -2,12 +2,12 @@ use crate::util::grid::{Direction, Grid};
 use crate::util::point::Point;
 use std::collections::VecDeque;
 
-type WarehouseGrid = Grid<WarehouseCell>;
-type RobotMoveInstruction = Direction;
+pub(crate) type WarehouseGrid = Grid<WarehouseCell>;
+pub(crate) type RobotMoveInstruction = Direction;
 
 /// represents the input incl. Robot variant
 #[derive(Debug, PartialEq)]
-enum WarehouseCellParsing {
+pub(crate) enum WarehouseCellParsing {
     Wall,
     Box,
     Empty,
@@ -17,7 +17,7 @@ enum WarehouseCellParsing {
 /// represents the easier to handle Warehouse variants without Robot
 /// (didn't fit the Grid based algo and is therefor replaced by robot_pos)
 #[derive(Debug, PartialEq)]
-enum WarehouseCell {
+pub(crate) enum WarehouseCell {
     Wall,
     Box,
     Empty,
@@ -130,7 +130,7 @@ impl From<&str> for WarehouseSituation {
             .split_once("\n\n")
             .unwrap_or_else(|| value.split_once("\r\n\r\n").unwrap());
 
-        let grid = Grid::from(grid).map(WarehouseCellParsing::from);
+        let grid = Grid::<char>::from(grid).map(WarehouseCellParsing::from);
 
         let start_pos = *grid
             .iter()

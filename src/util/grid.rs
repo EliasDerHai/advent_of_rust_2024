@@ -47,6 +47,10 @@ impl<T> IntoIterator for Grid<T> {
 }
 
 impl<T> Grid<T> {
+    pub fn new(map: HashMap<Point, T>) -> Self {
+        Grid { map }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (&Point, &T)> {
         self.map.iter()
     }
@@ -87,7 +91,7 @@ mod tests {
 345
 678"
         .trim();
-        let original = Grid::from(chars);
+        let original: Grid<char> = Grid::from(chars);
         let numeric: Grid<u8> = original.map(|v| v.to_string().parse::<u8>().unwrap());
         assert_eq!(36u8, numeric.map.iter().map(|(_, v)| v).sum());
     }
