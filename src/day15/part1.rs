@@ -63,36 +63,22 @@ impl WarehouseSituation {
     }
 
     fn apply_all_instructions(self) -> WarehouseGrid {
-        let mut next = self.next();
+        self.instructions
+            .clone()
+            .into_iter()
+            .fold(self, |mut situation, inst| {
+                let next = situation.robot_pos + inst;
 
-        while let InstructionResult::Next(situation) = next {
-            next = situation.next();
-        }
-
-        match next {
-            InstructionResult::Next(_) => panic!("should not have terminated while loop..."),
-            InstructionResult::Final(grid) => grid,
-        }
-    }
-
-    fn next(mut self) -> InstructionResult {
-        match self.instructions.pop_front() {
-            None => InstructionResult::Final(self.grid),
-            Some(instruction) => InstructionResult::Next(self.apply(instruction)),
-        }
-    }
-
-    fn apply(mut self, instruction: RobotMoveInstruction) -> Self {
-        let next = self.robot_pos + instruction;
-
-        match self.grid.get(&next).unwrap() {
-            &WarehouseCell::Wall => self,
-            &WarehouseCell::Empty => {
-                self.robot_pos = next;
-                self
-            }
-            &WarehouseCell::Box => self.attempt_to_move_box(next, instruction),
-        }
+                match situation.grid.get(&next).unwrap() {
+                    &WarehouseCell::Wall => situation,
+                    &WarehouseCell::Empty => {
+                        situation.robot_pos = next;
+                        situation
+                    }
+                    &WarehouseCell::Box => situation.attempt_to_move_box(next, inst),
+                }
+            })
+            .grid
     }
 
     fn attempt_to_move_box(mut self, first_box: Point, instruction: RobotMoveInstruction) -> Self {
@@ -117,11 +103,6 @@ impl WarehouseSituation {
             (_, WarehouseCell::Box) => panic!("should not have terminated while loop..."),
         }
     }
-}
-
-enum InstructionResult {
-    Next(WarehouseSituation),
-    Final(WarehouseGrid),
 }
 
 impl From<&str> for WarehouseSituation {
