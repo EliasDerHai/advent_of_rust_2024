@@ -23,8 +23,8 @@ impl From<&str> for DoubleWidthWarehouseGrid {
     }
 }
 
-impl From<WarehouseGrid> for DoubleWidthWarehouseGrid {
-    fn from(value: WarehouseGrid) -> Self {
+impl From<Grid<WarehouseCell>> for DoubleWidthWarehouseGrid {
+    fn from(value: Grid<WarehouseCell>) -> Self {
         let width_multiplier = (2, 1);
         let mut double_warehouse_grid: HashMap<Point, DoubleWidthWarehouseCell> = HashMap::new();
 
@@ -51,7 +51,7 @@ impl From<WarehouseGrid> for DoubleWidthWarehouseGrid {
     }
 }
 
-pub fn solve_day_15_part_02(input: &str) -> u32 {
+pub fn solve_day_15_part_02(_input: &str) -> u32 {
     todo!()
 }
 

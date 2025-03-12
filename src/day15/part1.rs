@@ -2,7 +2,60 @@ use crate::util::grid::{Direction, Grid};
 use crate::util::point::Point;
 use std::collections::VecDeque;
 
-pub(crate) type WarehouseGrid = Grid<WarehouseCell>;
+#[derive(Debug, PartialEq)]
+pub(crate) struct Warehouse<CELL> {
+    grid: Grid<CELL>,
+    robot_pos: Point,
+}
+
+impl<CELL> Warehouse<CELL> {
+    fn new(grid: Grid<CELL>, robot_pos: Point) -> Warehouse<CELL> {
+        Warehouse { grid, robot_pos }
+    }
+}
+
+impl Warehouse<WarehouseCell> {
+    fn apply_instruction(mut self, instruction: RobotMoveInstruction) -> Self {
+        let next = self.robot_pos + instruction;
+
+        match self.grid.get(&next).unwrap() {
+            &WarehouseCell::Wall => self,
+            &WarehouseCell::Empty => {
+                self.robot_pos = next;
+                self
+            }
+            &WarehouseCell::Box => self.attempt_to_move_box(next, instruction),
+        }
+    }
+
+    fn attempt_to_move_box(
+        mut self,
+        first_box: Point,
+        instruction: RobotMoveInstruction,
+    ) -> Self {
+        // represents the last element of the stack to shift
+        // initialized as box and incrementally checked if "row" ends in wall or free space
+        let mut end_of_stack = (first_box.clone(), &WarehouseCell::Box);
+
+        while end_of_stack.1 == &WarehouseCell::Box {
+            let next_point = end_of_stack.0 + instruction;
+            let next_cell = self.grid.get(&next_point).unwrap();
+            end_of_stack = (next_point, next_cell);
+        }
+
+        match end_of_stack {
+            (_, WarehouseCell::Wall) => self,
+            (p, WarehouseCell::Empty) => {
+                self.grid.set(first_box, WarehouseCell::Empty);
+                self.grid.set(p, WarehouseCell::Box);
+                self.robot_pos = first_box;
+                self
+            }
+            (_, WarehouseCell::Box) => panic!("should not have terminated while loop..."),
+        }
+    }
+}
+
 pub(crate) type RobotMoveInstruction = Direction;
 
 /// represents the input incl. Robot variant
@@ -47,65 +100,30 @@ impl From<WarehouseCellParsing> for WarehouseCell {
 }
 
 #[derive(Debug, PartialEq)]
-struct WarehouseSituation {
-    grid: WarehouseGrid,
+struct WarehouseSituation<CELL> {
+    warehouse: Warehouse<CELL>,
     instructions: VecDeque<RobotMoveInstruction>,
-    robot_pos: Point,
 }
 
-impl WarehouseSituation {
-    fn new(grid: WarehouseGrid, instructions: Vec<RobotMoveInstruction>, start_pos: Point) -> Self {
+impl<CELL> WarehouseSituation<CELL> {
+    fn new(grid: Warehouse<CELL>, instructions: Vec<RobotMoveInstruction>) -> Self {
         WarehouseSituation {
-            grid,
+            warehouse: grid,
             instructions: instructions.into(),
-            robot_pos: start_pos,
         }
     }
+}
 
-    fn apply_all_instructions(self) -> WarehouseGrid {
+impl WarehouseSituation<WarehouseCell> {
+    fn apply_all_instructions(self) -> Warehouse<WarehouseCell> {
         self.instructions
             .clone()
             .into_iter()
-            .fold(self, |mut situation, inst| {
-                let next = situation.robot_pos + inst;
-
-                match situation.grid.get(&next).unwrap() {
-                    &WarehouseCell::Wall => situation,
-                    &WarehouseCell::Empty => {
-                        situation.robot_pos = next;
-                        situation
-                    }
-                    &WarehouseCell::Box => situation.attempt_to_move_box(next, inst),
-                }
+            .fold(self.warehouse, |warehouse, instruction| {
+                warehouse.apply_instruction(instruction)
             })
-            .grid
     }
 
-    fn attempt_to_move_box(mut self, first_box: Point, instruction: RobotMoveInstruction) -> Self {
-        // represents the last element of the stack to shift
-        // initialized as box and incrementally checked if "row" ends in wall or free space
-        let mut end_of_stack = (first_box.clone(), &WarehouseCell::Box);
-
-        while end_of_stack.1 == &WarehouseCell::Box {
-            let next_point = end_of_stack.0 + instruction;
-            let next_cell = self.grid.get(&next_point).unwrap();
-            end_of_stack = (next_point, next_cell);
-        }
-
-        match end_of_stack {
-            (_, WarehouseCell::Wall) => self,
-            (p, WarehouseCell::Empty) => {
-                self.grid.set(first_box, WarehouseCell::Empty);
-                self.grid.set(p, WarehouseCell::Box);
-                self.robot_pos = first_box;
-                self
-            }
-            (_, WarehouseCell::Box) => panic!("should not have terminated while loop..."),
-        }
-    }
-}
-
-impl From<&str> for WarehouseSituation {
     fn from(value: &str) -> Self {
         let (grid, instructions) = value
             .split_once("\n\n")
@@ -118,7 +136,7 @@ impl From<&str> for WarehouseSituation {
             .find(|(&_, cell)| cell == &&WarehouseCellParsing::Robot)
             .unwrap()
             .0;
-        let grid = grid.map(WarehouseCell::from);
+        let grid = Warehouse::new(grid.map(WarehouseCell::from), start_pos);
 
         let instructions = instructions
             .chars()
@@ -131,7 +149,7 @@ impl From<&str> for WarehouseSituation {
             })
             .collect();
 
-        WarehouseSituation::new(grid, instructions, start_pos)
+        WarehouseSituation::new(grid, instructions)
     }
 }
 
@@ -140,6 +158,7 @@ pub fn solve_day_15_part_01(input: &str) -> u32 {
     let final_warehouse = initial_situation.apply_all_instructions();
 
     final_warehouse
+        .grid
         .into_iter()
         .filter(|(_, cell)| cell == &WarehouseCell::Box)
         .map(|(p, _)| p.x as u32 + (p.y as u32 * 100))
@@ -202,16 +221,16 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^";
             .instructions
             .get(actual.instructions.len() - 1)
             .unwrap();
-        let origin = actual.grid.get(&Point::new(0, 0)).unwrap();
-        let one_one = actual.grid.get(&Point::new(1, 1)).unwrap();
-        let first_box = actual.grid.get(&Point::new(3, 1)).unwrap();
+        let origin = actual.warehouse.grid.get(&Point::new(0, 0)).unwrap();
+        let one_one = actual.warehouse.grid.get(&Point::new(1, 1)).unwrap();
+        let first_box = actual.warehouse.grid.get(&Point::new(3, 1)).unwrap();
 
         assert_eq!(&Direction::W, first_instruction);
         assert_eq!(&Direction::N, last_instruction);
         assert_eq!(&WarehouseCell::Wall, origin);
         assert_eq!(&WarehouseCell::Empty, one_one);
         assert_eq!(&WarehouseCell::Box, first_box);
-        assert_eq!(Point::new(4, 4), actual.robot_pos)
+        assert_eq!(Point::new(4, 4), actual.warehouse.robot_pos)
     }
 
     /// the instructions don't really matter here
@@ -219,33 +238,39 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^";
     fn should_move_single_box() {
         let situation = WarehouseSituation::from("@O..#\n\n");
 
-        let actual = situation.attempt_to_move_box(Point::new(1, 0), Direction::E);
+        let actual = situation
+            .warehouse
+            .attempt_to_move_box(Point::new(1, 0), Direction::E);
 
         let expected = WarehouseSituation::from(".@O.#\n\n");
 
-        assert_eq!(expected, actual);
+        assert_eq!(expected.warehouse, actual);
     }
 
     #[test]
     fn should_move_two_boxes() {
         let situation = WarehouseSituation::from("@OO.#\n\n");
 
-        let actual = situation.attempt_to_move_box(Point::new(1, 0), Direction::E);
+        let actual = situation
+            .warehouse
+            .attempt_to_move_box(Point::new(1, 0), Direction::E);
 
         let expected = WarehouseSituation::from(".@OO#\n\n");
 
-        assert_eq!(expected, actual);
+        assert_eq!(expected.warehouse, actual);
     }
 
     #[test]
     fn should_not_move_boxes() {
         let situation = WarehouseSituation::from("@OO#\n\n");
 
-        let actual = situation.attempt_to_move_box(Point::new(1, 0), Direction::E);
+        let actual = situation
+            .warehouse
+            .attempt_to_move_box(Point::new(1, 0), Direction::E);
 
         let expected = WarehouseSituation::from("@OO#\n\n");
 
-        assert_eq!(expected, actual);
+        assert_eq!(expected.warehouse, actual);
     }
 
     /// instructions do matter now
@@ -257,6 +282,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^";
 
         let expected = WarehouseSituation::from("..@O#\n\n");
 
-        assert_eq!(expected.grid, actual);
+        assert_eq!(expected.warehouse, actual);
     }
 }

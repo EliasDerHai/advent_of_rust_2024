@@ -150,7 +150,7 @@ mod tests {
     fn should_solve_day_14_part_02() {
         let input = read_string("./src/day14/input.txt").unwrap();
 
-        let solution = solve_day_14_part_02(&input);
+        solve_day_14_part_02(&input);
     }
 
     #[test]
