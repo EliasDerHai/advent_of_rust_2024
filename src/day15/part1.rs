@@ -2,60 +2,6 @@ use crate::util::grid::{Direction, Grid};
 use crate::util::point::Point;
 use std::collections::VecDeque;
 
-#[derive(Debug, PartialEq)]
-pub(crate) struct Warehouse<CELL> {
-    grid: Grid<CELL>,
-    robot_pos: Point,
-}
-
-impl<CELL> Warehouse<CELL> {
-    fn new(grid: Grid<CELL>, robot_pos: Point) -> Warehouse<CELL> {
-        Warehouse { grid, robot_pos }
-    }
-}
-
-impl Warehouse<WarehouseCell> {
-    fn apply_instruction(mut self, instruction: RobotMoveInstruction) -> Self {
-        let next = self.robot_pos + instruction;
-
-        match self.grid.get(&next).unwrap() {
-            &WarehouseCell::Wall => self,
-            &WarehouseCell::Empty => {
-                self.robot_pos = next;
-                self
-            }
-            &WarehouseCell::Box => self.attempt_to_move_box(next, instruction),
-        }
-    }
-
-    fn attempt_to_move_box(
-        mut self,
-        first_box: Point,
-        instruction: RobotMoveInstruction,
-    ) -> Self {
-        // represents the last element of the stack to shift
-        // initialized as box and incrementally checked if "row" ends in wall or free space
-        let mut end_of_stack = (first_box.clone(), &WarehouseCell::Box);
-
-        while end_of_stack.1 == &WarehouseCell::Box {
-            let next_point = end_of_stack.0 + instruction;
-            let next_cell = self.grid.get(&next_point).unwrap();
-            end_of_stack = (next_point, next_cell);
-        }
-
-        match end_of_stack {
-            (_, WarehouseCell::Wall) => self,
-            (p, WarehouseCell::Empty) => {
-                self.grid.set(first_box, WarehouseCell::Empty);
-                self.grid.set(p, WarehouseCell::Box);
-                self.robot_pos = first_box;
-                self
-            }
-            (_, WarehouseCell::Box) => panic!("should not have terminated while loop..."),
-        }
-    }
-}
-
 pub(crate) type RobotMoveInstruction = Direction;
 
 /// represents the input incl. Robot variant
@@ -100,6 +46,56 @@ impl From<WarehouseCellParsing> for WarehouseCell {
 }
 
 #[derive(Debug, PartialEq)]
+pub(crate) struct Warehouse<CELL> {
+    pub(crate) grid: Grid<CELL>,
+    pub(crate) robot_pos: Point,
+}
+
+impl<CELL> Warehouse<CELL> {
+    pub(crate) fn new(grid: Grid<CELL>, robot_pos: Point) -> Warehouse<CELL> {
+        Warehouse { grid, robot_pos }
+    }
+}
+
+impl Warehouse<WarehouseCell> {
+    fn apply_instruction(mut self, instruction: RobotMoveInstruction) -> Self {
+        let next = self.robot_pos + instruction;
+
+        match self.grid.get(&next).unwrap() {
+            &WarehouseCell::Wall => self,
+            &WarehouseCell::Empty => {
+                self.robot_pos = next;
+                self
+            }
+            &WarehouseCell::Box => self.attempt_to_move_box(next, instruction),
+        }
+    }
+
+    fn attempt_to_move_box(mut self, first_box: Point, instruction: RobotMoveInstruction) -> Self {
+        // represents the last element of the stack to shift
+        // initialized as box and incrementally checked if "row" ends in wall or free space
+        let mut end_of_stack = (first_box.clone(), &WarehouseCell::Box);
+
+        while end_of_stack.1 == &WarehouseCell::Box {
+            let next_point = end_of_stack.0 + instruction;
+            let next_cell = self.grid.get(&next_point).unwrap();
+            end_of_stack = (next_point, next_cell);
+        }
+
+        match end_of_stack {
+            (_, WarehouseCell::Wall) => self,
+            (p, WarehouseCell::Empty) => {
+                self.grid.set(first_box, WarehouseCell::Empty);
+                self.grid.set(p, WarehouseCell::Box);
+                self.robot_pos = first_box;
+                self
+            }
+            (_, WarehouseCell::Box) => panic!("should not have terminated while loop..."),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 struct WarehouseSituation<CELL> {
     warehouse: Warehouse<CELL>,
     instructions: VecDeque<RobotMoveInstruction>,
@@ -115,15 +111,6 @@ impl<CELL> WarehouseSituation<CELL> {
 }
 
 impl WarehouseSituation<WarehouseCell> {
-    fn apply_all_instructions(self) -> Warehouse<WarehouseCell> {
-        self.instructions
-            .clone()
-            .into_iter()
-            .fold(self.warehouse, |warehouse, instruction| {
-                warehouse.apply_instruction(instruction)
-            })
-    }
-
     fn from(value: &str) -> Self {
         let (grid, instructions) = value
             .split_once("\n\n")
@@ -150,6 +137,15 @@ impl WarehouseSituation<WarehouseCell> {
             .collect();
 
         WarehouseSituation::new(grid, instructions)
+    }
+
+    fn apply_all_instructions(self) -> Warehouse<WarehouseCell> {
+        self.instructions
+            .clone()
+            .into_iter()
+            .fold(self.warehouse, |warehouse, instruction| {
+                warehouse.apply_instruction(instruction)
+            })
     }
 }
 
