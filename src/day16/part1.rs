@@ -32,7 +32,6 @@ impl From<&str> for ReindeerOlympicMap {
 /// we have to keep track of the traveldirection for each node in order to run the g-function
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum TravelDirection {
-    // Undecided,
     N,
     E,
     S,
@@ -67,12 +66,10 @@ impl PathNode {
     }
 }
 
-/// continuing the parents direction is cheap; as is initially starting
+/// continuing the parents direction is cheap
 fn g(p: &Point, parent: &PathNode) -> (u32, TravelDirection) {
     let new_dir = parent.dir_to(p);
-    if
-    /* parent.dir == TravelDirection::Undecided || */
-    parent.dir == new_dir {
+    if parent.dir == new_dir {
         (parent.g + 1, new_dir)
     } else {
         (parent.g + 1001, new_dir)
@@ -86,12 +83,7 @@ fn h(n: &Point, goal: &Point) -> u32 {
 }
 
 fn a_star_pathfinding(map: ReindeerOlympicMap) -> Option<u32> {
-    let start_node = PathNode::new(
-        map.start,
-        0,
-        h(&map.start, &map.end),
-        TravelDirection::E, // Undecided,
-    );
+    let start_node = PathNode::new(map.start, 0, h(&map.start, &map.end), TravelDirection::E);
 
     let mut open: Vec<PathNode> = vec![start_node];
     let mut closed: Vec<PathNode> = Vec::new();
