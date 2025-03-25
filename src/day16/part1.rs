@@ -2,15 +2,15 @@ use crate::util::grid::Grid;
 use crate::util::point::Point;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Cells {
+pub(super) enum Cells {
     Wall,
     Empty,
 }
 
-struct ReindeerOlympicMap {
-    start: Point,
-    end: Point,
-    grid: Grid<Cells>,
+pub(super) struct ReindeerOlympicMap {
+    pub(super) start: Point,
+    pub(super) end: Point,
+    pub(super) grid: Grid<Cells>,
 }
 
 impl From<&str> for ReindeerOlympicMap {
@@ -30,8 +30,8 @@ impl From<&str> for ReindeerOlympicMap {
 }
 
 /// we have to keep track of the traveldirection for each node in order to run the g-function
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum TravelDirection {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) enum TravelDirection {
     N,
     E,
     S,
