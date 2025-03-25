@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use super::part1::*;
-use crate::util::grid::Grid;
 use crate::util::point::Point;
 
 #[derive(Debug, Clone, PartialEq)]
