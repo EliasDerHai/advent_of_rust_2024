@@ -43,6 +43,10 @@ impl Point {
             y: self.y + 1,
         }
     }
+
+    pub fn neighbors(&self) -> [Point; 4] {
+        [self.up(), self.right(), self.down(), self.left()]
+    }
 }
 
 impl Display for Point {
