@@ -1,7 +1,7 @@
 type OperandValue = u8;
 
 #[derive(Debug, PartialEq, Eq, Default)]
-struct TuringTape(Vec<(OpCode, OperandValue)>);
+pub(super) struct TuringTape(pub Vec<(OpCode, OperandValue)>);
 
 impl From<&str> for TuringTape {
     fn from(value: &str) -> Self {
@@ -21,7 +21,7 @@ impl From<&str> for TuringTape {
     }
 }
 
-fn parse(input: &str) -> (TuringTape, TuringState) {
+pub(super) fn parse(input: &str) -> (TuringTape, TuringState) {
     let mut a_val = None;
     let mut b_val = None;
     let mut c_val = None;
@@ -52,13 +52,13 @@ fn parse(input: &str) -> (TuringTape, TuringState) {
     )
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct TuringState {
-    pointer: usize,
-    reg_a: u32,
-    reg_b: u32,
-    reg_c: u32,
-    output: Vec<u8>,
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub(super) struct TuringState {
+    pub(super) pointer: usize,
+    pub(super) reg_a: u32,
+    pub(super) reg_b: u32,
+    pub(super) reg_c: u32,
+    pub(super) output: Vec<u8>,
 }
 
 impl TuringState {
@@ -72,7 +72,7 @@ impl TuringState {
         }
     }
 
-    fn advance(mut self, opcode: &OpCode, operand: &u8) -> TuringState {
+    pub(crate) fn advance(mut self, opcode: &OpCode, operand: &u8) -> TuringState {
         let combo_operand = || ComboOperand.resolve(&self, *operand);
         let literal_operand = || LiteralOperand.resolve(&self, *operand);
 
@@ -90,7 +90,6 @@ impl TuringState {
                 self.pointer += 1;
             }
             OpCode::Jnz => {
-                println!("jnz");
                 if self.reg_a != 0 {
                     self.pointer = literal_operand() as usize;
                 } else {
@@ -103,7 +102,6 @@ impl TuringState {
             }
             OpCode::Out => {
                 let out = combo_operand() % 8;
-                println!("out: {out}");
                 self.output.push(out as u8);
                 self.pointer += 1;
             }
@@ -122,7 +120,7 @@ impl TuringState {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum OpCode {
+pub(super) enum OpCode {
     Adv,
     Bxl,
     Bst,
@@ -149,11 +147,11 @@ impl From<&u8> for OpCode {
     }
 }
 
-trait Operand: Copy {
+trait Operand {
     fn resolve(self, state: &TuringState, input: u8) -> u32;
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct LiteralOperand;
 
 impl Operand for LiteralOperand {
@@ -162,7 +160,7 @@ impl Operand for LiteralOperand {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct ComboOperand;
 
 impl Operand for ComboOperand {
@@ -177,29 +175,11 @@ impl Operand for ComboOperand {
     }
 }
 
-fn advance(tape: &TuringTape, state: TuringState) -> TuringState {
-    let p = state.pointer;
-    match tape.0.get(p) {
-        Some((ref opcode, operand)) => state.advance(opcode, operand),
-        None => state,
-    }
-}
-
 pub fn solve_day_17_part_01(input: &str) -> String {
     let (tape, mut state) = parse(input);
 
-    //   println!("{:?}", tape);
-    //   println!("{:?}", state);
-    //   let mut i = 0;
-    //   println!("{}", state.pointer);
-    while state.pointer < tape.0.len() {
-        //      println!("{}", state.pointer);
-        state = advance(&tape, state);
-        //       i += 1;
-        //       if i > 50 {
-        //           println!("{:?}", state);
-        //           panic!("doesnt halt");
-        //       }
+    while let Some((opcode, operand)) = tape.0.get(state.pointer) {
+        state = state.advance(opcode, operand);
     }
 
     state
@@ -266,7 +246,6 @@ Program: 0,1,5,4,3,0
         let state = TuringState::new_all(729, 0, 0, 0, Vec::new());
         let tape: TuringTape = TuringTape::from("0,1,5,4,3,0");
 
-        println!("{:?}", tape);
         assert_eq!((tape, state), parse(input));
     }
 
@@ -280,7 +259,14 @@ Program: 0,1,5,4,3,0
             let tape: TuringTape = TuringTape::from("2,6");
 
             // act
-            let state = advance(&tape, state);
+            let state = {
+                let tape: &TuringTape = &tape;
+                let p = state.pointer;
+                match tape.0.get(p) {
+                    Some((ref opcode, operand)) => state.advance(opcode, operand),
+                    None => state,
+                }
+            };
 
             // assert
             let expected = TuringState::new_all(0, 1, 9, 1, Vec::new());
@@ -298,6 +284,19 @@ Program: 5,0,5,1,5,4
 ";
 
             assert_eq!("0,1,2".to_string(), solve_day_17_part_01(input));
+        }
+
+        #[test]
+        fn should_match_example_3() {
+            let input = "
+Register A: 117440
+Register B: 0
+Register C: 0
+
+Program: 0,3,5,4,3,0
+";
+
+            assert_eq!("0,3,5,4,3,0".to_string(), solve_day_17_part_01(input));
         }
     }
 
