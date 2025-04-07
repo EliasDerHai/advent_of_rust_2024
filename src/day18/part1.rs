@@ -18,7 +18,7 @@ impl PushdownAutomatonMap {
             .trim()
             .lines()
             .take(n as usize)
-            .map(|l| l.split_once(",").expect("should have comma"))
+            .map(|l| l.trim().split_once(",").expect("should have comma"))
             .map(|(x, y)| Point::new(x.parse().unwrap(), y.parse().unwrap()))
             .collect();
 
