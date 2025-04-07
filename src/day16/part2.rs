@@ -180,8 +180,6 @@ mod tests {
 
         let solution = solve_day_16_part_02(&input);
 
-        println!("{solution}");
-
         assert_eq!(538, solution);
     }
 
@@ -199,8 +197,6 @@ mod tests {
 #######
 ";
         let solutions = dijkstra_pathfinding(ReindeerOlympicMap::from(map.trim()));
-
-        println!("{:?}", solutions);
 
         assert_eq!(2, solutions.len());
     }
