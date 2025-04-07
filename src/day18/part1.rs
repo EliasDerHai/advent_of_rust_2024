@@ -5,7 +5,7 @@ use std::{
 };
 
 #[derive(Debug)]
-struct PushdownAutomatonMap {
+pub struct PushdownAutomatonMap {
     start: Point,
     goal: Point,
     corrupt: HashSet<Point>,
@@ -13,7 +13,7 @@ struct PushdownAutomatonMap {
 }
 
 impl PushdownAutomatonMap {
-    fn new(input: &str, size: u8, n: u16) -> Self {
+    pub fn new(input: &str, size: u8, n: u16) -> Self {
         let corrupt = input
             .trim()
             .lines()
@@ -89,7 +89,7 @@ fn h(n: &Point, goal: &Point) -> u32 {
     delta_x + delta_y
 }
 
-fn a_star_pathfinding(map: PushdownAutomatonMap) -> Option<u32> {
+pub fn a_star_pathfinding(map: PushdownAutomatonMap) -> Option<u32> {
     let start_node = PathNode::new(map.start, 0, h(&map.start, &map.goal));
 
     let mut open = BinaryHeap::new();
