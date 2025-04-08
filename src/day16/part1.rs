@@ -2,15 +2,15 @@ use crate::util::grid::Grid;
 use crate::util::point::Point;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(super) enum Cells {
+pub enum Cells {
     Wall,
     Empty,
 }
 
-pub(super) struct ReindeerOlympicMap {
-    pub(super) start: Point,
-    pub(super) end: Point,
-    pub(super) grid: Grid<Cells>,
+pub struct ReindeerOlympicMap {
+    pub start: Point,
+    pub end: Point,
+    pub grid: Grid<Cells>,
 }
 
 impl From<&str> for ReindeerOlympicMap {
