@@ -80,7 +80,7 @@ impl PathNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct PathNodeWithParent {
+pub(super) struct PathNodeWithParent {
     p: Point,
     f: u32,
     g: u32,
@@ -121,7 +121,7 @@ impl PathNodeWithParent {
         }
     }
 
-    fn collect_cost_map(self: &Rc<Self>) -> HashMap<Point, u32> {
+    pub(super) fn collect_cost_map(self: &Rc<Self>) -> HashMap<Point, u32> {
         let mut node: Rc<PathNodeWithParent> = Rc::clone(self);
         let mut map: HashMap<Point, u32> = HashMap::new();
         map.insert(self.p, self.g);
@@ -135,13 +135,13 @@ impl PathNodeWithParent {
     }
 }
 
-fn h(n: &Point, goal: &Point) -> u32 {
+pub(super) fn h(n: &Point, goal: &Point) -> u32 {
     let delta_x = (n.x - goal.x).abs() as u32;
     let delta_y = (n.y - goal.y).abs() as u32;
     delta_x + delta_y
 }
 
-fn a_star_pathfinding(map: &ReindeerOlympicMap) -> Rc<PathNodeWithParent> {
+pub(super) fn a_star_pathfinding(map: &ReindeerOlympicMap) -> Rc<PathNodeWithParent> {
     let start_node = Rc::new(PathNodeWithParent::new_start(
         map.start,
         0,

@@ -93,6 +93,6 @@ mod tests {
         .trim();
         let original: Grid<char> = Grid::from(chars);
         let numeric: Grid<u8> = original.map(|v| v.to_string().parse::<u8>().unwrap());
-        assert_eq!(36u8, numeric.map.iter().map(|(_, v)| v).sum());
+        assert_eq!(36u8, numeric.map.iter().map(|(_, v)| v).sum::<u8>());
     }
 }

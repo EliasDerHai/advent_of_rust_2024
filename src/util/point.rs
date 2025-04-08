@@ -1,4 +1,5 @@
 use crate::util::grid::Direction;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Mul, Sub};
 
@@ -46,6 +47,20 @@ impl Point {
 
     pub fn neighbors(&self) -> [Point; 4] {
         [self.up(), self.right(), self.down(), self.left()]
+    }
+
+    /// returns all points with the given proximity to self (manhatten distance cost)
+    pub fn proximity_manhattan(&self, n: u8) -> HashSet<Point> {
+        let n = n as i128;
+        (-n..=n)
+            .flat_map(|dx| {
+                let max_dy = n - dx.abs();
+                (-max_dy..=max_dy).map(move |dy| Point {
+                    x: self.x + dx,
+                    y: self.y + dy,
+                })
+            })
+            .collect()
     }
 }
 
@@ -118,5 +133,24 @@ impl From<&(u128, u128)> for Point {
             x: value.0 as i128,
             y: value.1 as i128,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+
+    #[test]
+    fn should_give_proximity() {
+        let p = Point::new(0, 0);
+        let actual = p.proximity_manhattan(1);
+        let expected: HashSet<Point> = vec![(0, 0), (1, 0), (0, 1), (0, -1), (-1, 0)]
+            .into_iter()
+            .map(|(x, y)| Point::new(x as i128, y as i128))
+            .collect();
+
+        assert_eq!(expected, actual);
     }
 }
