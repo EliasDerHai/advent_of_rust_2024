@@ -69,6 +69,14 @@ impl Add<Point> for Point {
     }
 }
 
+impl Add<(u8, u8)> for Point<u8> {
+    type Output = Point<u8>;
+
+    fn add(self, rhs: (u8, u8)) -> Self::Output {
+        Point::new(self.x + rhs.0, self.y + rhs.1)
+    }
+}
+
 impl Add<(i32, i32)> for Point {
     type Output = Point;
 
