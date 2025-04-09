@@ -8,6 +8,8 @@ trait KeypadKey {
     fn get_pos(&self) -> Point;
 }
 
+/* DoorKey */
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 enum DoorKey {
     A,
@@ -60,6 +62,8 @@ impl KeypadKey for DoorKey {
     }
 }
 
+/* DoorCode */
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct DoorCode([DoorKey; 4]);
 
@@ -86,6 +90,44 @@ fn parse_door_codes(input: &str) -> [DoorCode; 5] {
         .expect("incorrect length")
 }
 
+impl DoorCode {
+    fn transpile(&self, mut current_pos: Point) -> DirectionKeySequence {
+        DirectionKeySequence(
+            self.0
+                .iter()
+                .flat_map(|key| {
+                    let mut moves = Vec::new();
+                    let target_pos = key.get_pos();
+
+                    while current_pos.x < target_pos.x {
+                        moves.push(DirectionalKey::Right);
+                        current_pos = current_pos.right();
+                    }
+                    while current_pos.x > target_pos.x {
+                        moves.push(DirectionalKey::Left);
+                        current_pos = current_pos.left();
+                    }
+                    while current_pos.y > target_pos.y {
+                        moves.push(DirectionalKey::Up);
+                        current_pos = current_pos.up();
+                    }
+                    while current_pos.y < target_pos.y {
+                        moves.push(DirectionalKey::Down);
+                        current_pos = current_pos.down();
+                    }
+                    if current_pos == target_pos {
+                        moves.push(DirectionalKey::A);
+                    }
+
+                    moves
+                })
+                .collect(),
+        )
+    }
+}
+
+/* DirectionalKey */
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 enum DirectionalKey {
     Up,
@@ -93,6 +135,31 @@ enum DirectionalKey {
     Left,
     Right,
     A,
+}
+
+impl From<char> for DirectionalKey {
+    fn from(value: char) -> Self {
+        match value {
+            '^' => DirectionalKey::Up,
+            'A' => DirectionalKey::A,
+            '<' => DirectionalKey::Left,
+            'v' => DirectionalKey::Down,
+            '>' => DirectionalKey::Right,
+            _ => panic!("unexpected value '{value}'"),
+        }
+    }
+}
+
+impl KeypadKey for DirectionalKey {
+    fn get_pos(&self) -> Point {
+        match self {
+            DirectionalKey::Up => Point::new(1, 0),
+            DirectionalKey::A => Point::new(2, 0),
+            DirectionalKey::Left => Point::new(0, 1),
+            DirectionalKey::Down => Point::new(1, 1),
+            DirectionalKey::Right => Point::new(2, 1),
+        }
+    }
 }
 
 impl Display for DirectionalKey {
@@ -107,74 +174,138 @@ impl Display for DirectionalKey {
     }
 }
 
-fn transpile_door_key_code(mut current_pos: Point, code: &DoorCode) -> Vec<DirectionalKey> {
-    code.0
-        .iter()
-        .flat_map(|key| {
-            let mut moves = Vec::new();
-            let target_pos = key.get_pos();
+/* DirectionKeySequence */
 
-            while current_pos.x < target_pos.x {
-                println!("right");
-                moves.push(DirectionalKey::Right);
-                current_pos = current_pos.right();
-            }
-            while current_pos.x > target_pos.x {
-                println!("left");
-                moves.push(DirectionalKey::Left);
-                current_pos = current_pos.left();
-            }
-            while current_pos.y > target_pos.y {
-                println!("up");
-                moves.push(DirectionalKey::Up);
-                current_pos = current_pos.up();
-            }
-            while current_pos.y < target_pos.y {
-                println!("down");
-                moves.push(DirectionalKey::Down);
-                current_pos = current_pos.down();
-            }
-            if current_pos == target_pos {
-                println!("A");
-                moves.push(DirectionalKey::A);
-            }
+struct DirectionKeySequence(Vec<DirectionalKey>);
 
-            moves
-        })
-        .collect()
+impl From<&str> for DirectionKeySequence {
+    fn from(value: &str) -> Self {
+        DirectionKeySequence(
+            value
+                .chars()
+                .map(DirectionalKey::from)
+                .collect::<Vec<DirectionalKey>>(),
+        )
+    }
+}
+
+impl DirectionKeySequence {
+    fn transpile(&self, mut current_pos: Point) -> DirectionKeySequence {
+        DirectionKeySequence(
+            self.0
+                .iter()
+                .flat_map(|key| {
+                    let mut moves = Vec::new();
+                    let target_pos = key.get_pos();
+
+                    while current_pos.x < target_pos.x {
+                        moves.push(DirectionalKey::Right);
+                        current_pos = current_pos.right();
+                    }
+                    while current_pos.x > target_pos.x {
+                        moves.push(DirectionalKey::Left);
+                        current_pos = current_pos.left();
+                    }
+                    while current_pos.y > target_pos.y {
+                        moves.push(DirectionalKey::Up);
+                        current_pos = current_pos.up();
+                    }
+                    while current_pos.y < target_pos.y {
+                        moves.push(DirectionalKey::Down);
+                        current_pos = current_pos.down();
+                    }
+                    if current_pos == target_pos {
+                        moves.push(DirectionalKey::A);
+                    }
+
+                    moves
+                })
+                .collect(),
+        )
+    }
 }
 
 pub fn solve_day_21_part_01(input: &str) -> u32 {
-    todo!()
+    input
+        .lines()
+        .map(|line| {
+            let numeric_part = &line[..3];
+            let numeric_part = numeric_part
+                .parse::<u32>()
+                .expect(&format!("Couln't parse '{numeric_part}'"));
+
+            let code = DoorCode::from(line);
+            let transpiled = code.transpile(DoorKey::A.get_pos());
+            let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
+            let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
+            let transpiliation_length = transpiled.0.len() as u32;
+
+            let solution =numeric_part * transpiliation_length ;
+            println!("numeric_part = {numeric_part} + transpilation_length = {transpiliation_length} -> {solution}");
+            solution
+        })
+        .sum()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::stringify::stringify;
+
     use crate::util::file::read_string;
+    #[test]
+    fn should_solve() {
+        let input = read_string("./src/day21/input.txt").unwrap();
 
-    //   #[test]
-    //   fn should_solve_day_21_part_01() {
-    //       let input = read_string("./src/day21/input.txt").unwrap();
-    //
-    //       let solution = solve_day_21_part_01(&input);
-    //
-    //       println!("{solution}");
-    //   }
+        let solution = solve_day_21_part_01(&input);
 
-    fn stringify(displayable: Vec<impl Display>) -> String {
-        displayable
-            .iter()
-            .map(|item| item.to_string())
-            .collect::<Vec<String>>()
-            .join("")
+        println!("{solution}");
+        assert_eq!(0, solution);
+    }
+
+    #[test]
+    fn should_solve_example() {
+        let input = "
+029A
+980A
+179A
+456A
+379A"
+            .trim();
+
+        let solution = solve_day_21_part_01(&input);
+
+        println!("{solution}");
+        assert_eq!(126384, solution);
+    }
+
+    // TODO FIXME
+    #[test]
+    fn debug() {
+        let code = DoorCode::from("179A");
+        let transpiled = code.transpile(DoorKey::A.get_pos());
+        let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
+        let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
+
+        assert_eq!(
+            "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A",
+            stringify(transpiled.0)
+        );
     }
 
     #[test]
     fn should_transpile_doorcode() {
         let code: DoorCode = "029A".into();
-        let transpiled = transpile_door_key_code(DoorKey::A.get_pos(), &code);
+        let transpiled = code.transpile(DoorKey::A.get_pos());
 
-        assert_eq!("<A^A>^^AvvvA", stringify(transpiled));
+        assert_eq!("<A^A>^^AvvvA", stringify(transpiled.0));
+    }
+
+    #[test]
+    fn should_transpile_directioncode() {
+        let sequence: DirectionKeySequence = "<A^A>^^AvvvA".into();
+        let transpiled = sequence.transpile(DirectionalKey::A.get_pos());
+
+        assert_eq!("<<vA>>^A<A>AvA<^AA>A<vAAA>^A", stringify(transpiled.0));
     }
 }
