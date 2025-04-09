@@ -12,15 +12,15 @@ pub(crate) struct ClawMachine {
     // fixed cost of 1
     pub(crate) b: ButtonBehavior,
     // must match exactly
-    pub(crate) prize_location: Point,
+    pub(crate) prize_location: Point<i128>,
 }
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct ButtonBehavior {
     // add to x per button press
-    pub(crate) x: i32,
+    pub(crate) x: i128,
     // add to y per button press
-    pub(crate) y: i32,
+    pub(crate) y: i128,
 }
 
 impl From<&str> for Arcade {
@@ -40,7 +40,7 @@ impl From<&str> for Arcade {
             if line.starts_with(A_PREFIX) {
                 let mut numbers = line[A_PREFIX.len()..]
                     .split(BUTTON_SPLITTER)
-                    .map(|n| n.parse::<i32>().expect("NaN"));
+                    .map(|n| n.parse::<i128>().expect("NaN"));
                 a = ButtonBehavior {
                     x: numbers.next().expect("Should have X"),
                     y: numbers.next().expect("Should have Y"),
@@ -49,7 +49,7 @@ impl From<&str> for Arcade {
             if line.starts_with(B_PREFIX) {
                 let mut numbers = line[B_PREFIX.len()..]
                     .split(BUTTON_SPLITTER)
-                    .map(|n| n.parse::<i32>().expect("NaN"));
+                    .map(|n| n.parse::<i128>().expect("NaN"));
                 b = ButtonBehavior {
                     x: numbers.next().expect("Should have X"),
                     y: numbers.next().expect("Should have Y"),
@@ -59,7 +59,7 @@ impl From<&str> for Arcade {
                 let mut numbers = line[PRICE_PREFIX.len()..]
                     .split(PRICE_SPLITTER)
                     .map(|n| n.parse::<i128>().expect("NaN"));
-                let price_location = Point::new(
+                let price_location: Point<i128> = Point::new(
                     numbers.next().expect("Should have X"),
                     numbers.next().expect("Should have Y"),
                 );
@@ -72,9 +72,7 @@ impl From<&str> for Arcade {
             }
         }
 
-        Arcade {
-            machines
-        }
+        Arcade { machines }
     }
 }
 

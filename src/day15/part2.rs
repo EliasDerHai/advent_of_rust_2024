@@ -7,7 +7,7 @@ use std::fmt;
 use std::fmt::{Debug, Display};
 
 type DoubleWidthWarehouseGrid = Warehouse<DoubleWidthWarehouseCell>;
-const DOUBLE_WIDTH_UPSCALE_FACTOR: (usize, usize) = (2, 1);
+const DOUBLE_WIDTH_UPSCALE_FACTOR: (i32, i32) = (2, 1);
 
 #[derive(Debug, PartialEq, Clone)]
 enum DoubleWidthWarehouseCell {

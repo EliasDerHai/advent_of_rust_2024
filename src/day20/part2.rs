@@ -1,10 +1,13 @@
+use crate::{
+    day16::part1::{Cells, ReindeerOlympicMap},
+    util::point::Point,
+};
+
 use super::part1::a_star_pathfinding;
-use crate::day16::part1::*;
-use crate::util::point::Point;
 use std::sync::LazyLock;
 
 static MANHATTAN_OFFSETS_20: LazyLock<Vec<(Point, u8)>> = LazyLock::new(|| {
-    let r = 20i128;
+    let r = 20i32;
     let mut offsets = Vec::new();
     for dx in -r..=r {
         let max_dy = r - dx.abs();

@@ -61,31 +61,31 @@ pub struct TopographicMap {
 
 impl From<&str> for TopographicMap {
     fn from(value: &str) -> Self {
-        let map: HashMap<Point, Altitude> =
-            value
-                .lines()
-                .enumerate()
-                .into_iter()
-                .flat_map(|(y, line)| line
-                    .chars()
+        let map: HashMap<Point, Altitude> = value
+            .lines()
+            .enumerate()
+            .into_iter()
+            .flat_map(|(y, line)| {
+                line.chars()
                     // .filter(|c| c.is_digit(10))
                     .enumerate()
-                    .map(move |(x, c)|
-                        {
-                            let p = Point::new(x as i128, y as i128);
-                            let height = c.to_digit(10).unwrap_or(11) as u8;
-                            (p, Altitude(height))
-                        }
-                    )
-                )
-                .collect();
+                    .map(move |(x, c)| {
+                        let p = Point::new(x as i32, y as i32);
+                        let height = c.to_digit(10).unwrap_or(11) as u8;
+                        (p, Altitude(height))
+                    })
+            })
+            .collect();
         TopographicMap { map }
     }
 }
 
 impl TopographicMap {
     pub fn starting_points(&self) -> Vec<(&Point, &Altitude)> {
-        self.map.iter().filter(|(_p, a)| a.is_trail_head()).collect()
+        self.map
+            .iter()
+            .filter(|(_p, a)| a.is_trail_head())
+            .collect()
     }
 
     fn traverse(&self) -> usize {
@@ -137,16 +137,26 @@ mod tests {
 
     #[test]
     fn should_solve_day_10_part_01_sample() {
-        assert_eq!(2, solve_day_10_part_01("
+        assert_eq!(
+            2,
+            solve_day_10_part_01(
+                "
 ...0...
 ...1...
 ...2...
 6543456
 7.....7
 8.....8
-9.....9".trim().to_string()));
+9.....9"
+                    .trim()
+                    .to_string()
+            )
+        );
 
-        assert_eq!(36, solve_day_10_part_01("
+        assert_eq!(
+            36,
+            solve_day_10_part_01(
+                "
 89010123
 78121874
 87430965
@@ -154,6 +164,10 @@ mod tests {
 45678903
 32019012
 01329801
-10456732".trim().to_string()));
+10456732"
+                    .trim()
+                    .to_string()
+            )
+        );
     }
 }

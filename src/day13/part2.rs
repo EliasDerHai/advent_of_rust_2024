@@ -1,4 +1,4 @@
-use crate::day13::part1::{Arcade, ButtonBehavior, ClawMachine, cramer_integer_solve};
+use crate::day13::part1::{cramer_integer_solve, Arcade, ButtonBehavior, ClawMachine};
 use crate::util::point::Point;
 
 impl Arcade {
@@ -20,8 +20,8 @@ impl Arcade {
                     .split(BUTTON_SPLITTER)
                     .map(|n| n.parse::<u32>().expect("NaN"));
                 a = ButtonBehavior {
-                    x: numbers.next().expect("Should have X") as i32,
-                    y: numbers.next().expect("Should have Y") as i32,
+                    x: numbers.next().expect("Should have X") as i128,
+                    y: numbers.next().expect("Should have Y") as i128,
                 }
             }
             if line.starts_with(B_PREFIX) {
@@ -29,8 +29,8 @@ impl Arcade {
                     .split(BUTTON_SPLITTER)
                     .map(|n| n.parse::<u32>().expect("NaN"));
                 b = ButtonBehavior {
-                    x: numbers.next().expect("Should have X") as i32,
-                    y: numbers.next().expect("Should have Y") as i32,
+                    x: numbers.next().expect("Should have X") as i128,
+                    y: numbers.next().expect("Should have Y") as i128,
                 }
             }
             if line.starts_with(PRICE_PREFIX) {
@@ -45,17 +45,14 @@ impl Arcade {
                 machines.push(ClawMachine {
                     a: a.clone(),
                     b: b.clone(),
-                    prize_location: price_location + (10000000000000, 10000000000000),
+                    prize_location: price_location + (10000000000000i128, 10000000000000i128),
                 })
             }
         }
 
-        Arcade {
-            machines
-        }
+        Arcade { machines }
     }
 }
-
 
 pub fn solve_day_13_part_02(input: &str) -> u128 {
     let arcade = Arcade::from_with_added_billion(input);

@@ -50,7 +50,7 @@ fn save_to_ppm(iteration: usize, points: &Vec<Point>) {
     }
 }
 
-fn write_to_bmp(iteration: usize, points: &Vec<Point>) -> Result<(), io::Error> {
+fn write_to_bmp(iteration: u32, points: &Vec<Point>) -> Result<(), io::Error> {
     let mut display: [[bool; WIDTH]; HEIGHT] = [[false; WIDTH]; HEIGHT];
 
     points
@@ -124,7 +124,7 @@ fn write_to_bmp(iteration: usize, points: &Vec<Point>) -> Result<(), io::Error> 
 }
 
 pub fn solve_day_14_part_02(input: &str) {
-    let lobby = Lobby::try_from((input, WIDTH, HEIGHT)).unwrap();
+    let lobby = Lobby::try_from((input, WIDTH as u32, HEIGHT as u32)).unwrap();
     let tmp_dir = Path::new("./tmp");
     if !tmp_dir.exists() {
         fs::create_dir("tmp").expect("should create temp dir");

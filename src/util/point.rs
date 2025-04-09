@@ -7,58 +7,49 @@ use std::ops::{Add, Mul, Sub};
 /// ... could probably be refactored into a proper distinction between Point and Vec2,
 /// but I guess as long as I can solve the aoc I will just keep on going
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
-pub struct Point {
-    pub(crate) x: i128,
-    pub(crate) y: i128,
+pub struct Point<T = i32> {
+    pub(crate) x: T,
+    pub(crate) y: T,
 }
 
-impl Point {
-    pub fn new(x: i128, y: i128) -> Self {
+impl<T> Point<T> {
+    pub fn new(x: T, y: T) -> Self {
         Point { x, y }
     }
+}
 
-    pub fn left(&self) -> Point {
-        Point {
-            x: self.x - 1,
-            y: self.y,
-        }
+impl<T> Point<T>
+where
+    T: Copy + Add<Output = T> + Sub<Output = T> + From<i32>,
+{
+    pub fn left(&self) -> Point<T> {
+        Point::new(self.x - T::from(1), self.y)
     }
 
-    pub fn up(&self) -> Point {
-        Point {
-            x: self.x,
-            y: self.y - 1,
-        }
+    pub fn up(&self) -> Point<T> {
+        Point::new(self.x, self.y - T::from(1))
     }
 
-    pub fn right(&self) -> Point {
-        Point {
-            x: self.x + 1,
-            y: self.y,
-        }
+    pub fn right(&self) -> Point<T> {
+        Point::new(self.x + T::from(1), self.y)
     }
 
-    pub fn down(&self) -> Point {
-        Point {
-            x: self.x,
-            y: self.y + 1,
-        }
+    pub fn down(&self) -> Point<T> {
+        Point::new(self.x, self.y + T::from(1))
     }
 
-    pub fn neighbors(&self) -> [Point; 4] {
+    pub fn neighbors(&self) -> [Point<T>; 4] {
         [self.up(), self.right(), self.down(), self.left()]
     }
+}
 
-    /// returns all points with the given proximity to self (manhatten distance cost)
-    pub fn proximity_manhattan(&self, n: u8) -> HashSet<Point> {
-        let n = n as i128;
+impl Point<i32> {
+    /// Returns all points within Manhattan distance `n` from `self`
+    pub fn proximity_manhattan(&self, n: i32) -> HashSet<Point> {
         (-n..=n)
             .flat_map(|dx| {
                 let max_dy = n - dx.abs();
-                (-max_dy..=max_dy).map(move |dy| Point {
-                    x: self.x + dx,
-                    y: self.y + dy,
-                })
+                (-max_dy..=max_dy).map(move |dy| Point::new(self.x + dx, self.y + dy))
             })
             .collect()
     }
@@ -78,11 +69,19 @@ impl Add<Point> for Point {
     }
 }
 
-impl Add<(usize, usize)> for Point {
+impl Add<(i32, i32)> for Point {
     type Output = Point;
 
-    fn add(self, rhs: (usize, usize)) -> Self::Output {
-        Point::new(self.x + rhs.0 as i128, self.y + rhs.1 as i128)
+    fn add(self, rhs: (i32, i32)) -> Self::Output {
+        Point::new(self.x + rhs.0, self.y + rhs.1)
+    }
+}
+
+impl Add<(i128, i128)> for Point<i128> {
+    type Output = Self;
+
+    fn add(self, rhs: (i128, i128)) -> Self::Output {
+        Point::new(self.x + rhs.0, self.y + rhs.1)
     }
 }
 
@@ -111,23 +110,23 @@ impl Sub for Point {
     }
 }
 
-impl Mul<usize> for Point {
+impl Mul<i32> for Point {
     type Output = Point;
 
-    fn mul(self, rhs: usize) -> Self::Output {
-        Point::new(self.x * rhs as i128, self.y * rhs as i128)
+    fn mul(self, rhs: i32) -> Self::Output {
+        Point::new(self.x * rhs, self.y * rhs)
     }
 }
 
-impl Mul<(usize, usize)> for Point {
+impl Mul<(i32, i32)> for Point {
     type Output = Point;
 
-    fn mul(self, rhs: (usize, usize)) -> Self::Output {
-        Point::new(self.x * rhs.0 as i128, self.y * rhs.1 as i128)
+    fn mul(self, rhs: (i32, i32)) -> Self::Output {
+        Point::new(self.x * rhs.0, self.y * rhs.1)
     }
 }
 
-impl From<&(u128, u128)> for Point {
+impl From<&(u128, u128)> for Point<i128> {
     fn from(value: &(u128, u128)) -> Self {
         Point {
             x: value.0 as i128,
@@ -148,7 +147,7 @@ mod tests {
         let actual = p.proximity_manhattan(1);
         let expected: HashSet<Point> = vec![(0, 0), (1, 0), (0, 1), (0, -1), (-1, 0)]
             .into_iter()
-            .map(|(x, y)| Point::new(x as i128, y as i128))
+            .map(|(x, y)| Point::new(x, y))
             .collect();
 
         assert_eq!(expected, actual);

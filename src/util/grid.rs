@@ -28,7 +28,7 @@ impl From<&str> for Grid<char> {
             .into_iter()
             .flat_map(|(y, line)| {
                 line.chars().enumerate().map(move |(x, c)| {
-                    let p = Point::new(x as i128, y as i128);
+                    let p = Point::new(x as i32, y as i32);
                     (p, c)
                 })
             })

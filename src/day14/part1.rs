@@ -7,10 +7,15 @@ pub(crate) struct Robot {
 }
 
 impl Robot {
-    pub(crate) fn project_pos(&self, iterations: usize, canvas_width: usize, canvas_height: usize) -> Point {
-        let raw = self.start_pos + (self.velocity * iterations);
-        let bounded_x = raw.x.rem_euclid(canvas_width as i128);
-        let bounded_y = raw.y.rem_euclid(canvas_height as i128);
+    pub(crate) fn project_pos(
+        &self,
+        iterations: u32,
+        canvas_width: u32,
+        canvas_height: u32,
+    ) -> Point {
+        let raw = self.start_pos + (self.velocity * iterations as i32);
+        let bounded_x = raw.x.rem_euclid(canvas_width as i32);
+        let bounded_y = raw.y.rem_euclid(canvas_height as i32);
         Point::new(bounded_x, bounded_y)
     }
 
@@ -24,14 +29,14 @@ impl Robot {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Lobby {
-    pub(crate) width: usize,
-    pub(crate) height: usize,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
     pub(crate) robots: Vec<Robot>,
 }
-impl TryFrom<(&str, usize, usize)> for Lobby {
+impl TryFrom<(&str, u32, u32)> for Lobby {
     type Error = String;
 
-    fn try_from(value: (&str, usize, usize)) -> Result<Self, Self::Error> {
+    fn try_from(value: (&str, u32, u32)) -> Result<Self, Self::Error> {
         let (input, width, height) = value;
         let robots: Vec<Robot> = input
             .lines()
@@ -45,12 +50,12 @@ impl TryFrom<(&str, usize, usize)> for Lobby {
                 let pos_info = pos_info[2..].split_once(",").unwrap();
                 let velocity_info = velocity_info[2..].split_once(",").unwrap();
                 let pos_info = Point::new(
-                    pos_info.0.parse::<i128>().unwrap(),
-                    pos_info.1.parse::<i128>().unwrap(),
+                    pos_info.0.parse::<i32>().unwrap(),
+                    pos_info.1.parse::<i32>().unwrap(),
                 );
                 let velocity_info = Point::new(
-                    velocity_info.0.parse::<i128>().unwrap(),
-                    velocity_info.1.parse::<i128>().unwrap(),
+                    velocity_info.0.parse::<i32>().unwrap(),
+                    velocity_info.1.parse::<i32>().unwrap(),
                 );
                 Some(Robot::new(pos_info, velocity_info))
             })
@@ -66,9 +71,9 @@ impl TryFrom<(&str, usize, usize)> for Lobby {
 
 pub fn solve_day_14_part_01(
     input: &str,
-    canvas_width: usize,
-    canvas_height: usize,
-    iterations: usize,
+    canvas_width: u32,
+    canvas_height: u32,
+    iterations: u32,
 ) -> u32 {
     let lobby = Lobby::try_from((input, canvas_width, canvas_height)).unwrap();
 
@@ -78,8 +83,8 @@ pub fn solve_day_14_part_01(
         .map(|r| Robot::project_pos(&r, iterations, lobby.width, lobby.height))
         .collect();
 
-    let half_width: i128 = (canvas_width / 2) as i128;
-    let half_height: i128 = (canvas_height / 2) as i128;
+    let half_width: i32 = (canvas_width / 2) as i32;
+    let half_height: i32 = (canvas_height / 2) as i32;
 
     // println!("{half_width}/{half_height}");
     let q1 = positions_at_target_time
@@ -164,6 +169,7 @@ mod tests {
         assert_eq!(lobby.height, 11);
         assert_eq!(lobby.robots.len(), 12);
     }
+
     #[test]
     fn should_project_single_point_neg_wrap_around() {
         let r = Robot::new(Point::new(0, 0), Point::new(-1, -1));

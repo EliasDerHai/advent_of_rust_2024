@@ -22,7 +22,7 @@ impl PushdownAutomatonMap {
             .map(|(x, y)| Point::new(x.parse().unwrap(), y.parse().unwrap()))
             .collect();
 
-        let goal_x_y: i128 = size as i128 - 1;
+        let goal_x_y: i32 = size as i32 - 1;
         PushdownAutomatonMap {
             start: Point::new(0, 0),
             goal: Point::new(goal_x_y, goal_x_y),
@@ -115,9 +115,9 @@ pub fn a_star_pathfinding(map: PushdownAutomatonMap) -> Option<u32> {
             .filter(|p| {
                 !map.corrupt.contains(p)
                     && p.x >= 0
-                    && p.x < map.map_length as i128
+                    && p.x < map.map_length as i32
                     && p.y >= 0
-                    && p.y < map.map_length as i128
+                    && p.y < map.map_length as i32
             })
             .filter(|p| !closed.contains(p))
             .filter_map(|p| {
