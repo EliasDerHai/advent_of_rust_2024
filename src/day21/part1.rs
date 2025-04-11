@@ -1,18 +1,14 @@
 use crate::util::grid::Grid;
 use crate::util::point::Point;
-use crate::util::stringify::stringify;
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::Display;
 use std::hash::Hash;
 use std::sync::LazyLock;
 
-pub trait KeypadKey {
-    fn get_pos(&self) -> Point;
-}
-
-trait Transpileable {
+pub(super) trait Transpileable {
     fn transpile(&self) -> DirectionKeySequence;
+    fn len(&self) -> usize;
 }
 
 /* DoorKey */
@@ -51,6 +47,50 @@ impl From<char> for DoorKey {
     }
 }
 
+/* DoorCode */
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub(super) struct DoorCode([DoorKey; 4]);
+
+impl From<&str> for DoorCode {
+    fn from(value: &str) -> Self {
+        DoorCode(
+            value
+                .chars()
+                .map(DoorKey::from)
+                .collect::<Vec<DoorKey>>()
+                .try_into()
+                .expect("incorrect length"),
+        )
+    }
+}
+
+impl Transpileable for DoorCode {
+    fn transpile(&self) -> DirectionKeySequence {
+        let mut pos = DoorKey::A;
+        let map = &NUMBER_KEYPAD;
+        DirectionKeySequence(
+            self.0
+                .iter()
+                .flat_map(|&key| {
+                    let mut moves = map.get(&(pos, key)).unwrap().clone();
+                    pos = key;
+                    moves.push(DirectionKey::A);
+                    moves
+                })
+                .collect(),
+        )
+    }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+/// only used for assertions and paranoia
+pub trait KeypadKey {
+    fn get_pos(&self) -> Point;
+}
+
 impl KeypadKey for DoorKey {
     fn get_pos(&self) -> Point {
         match self {
@@ -69,19 +109,15 @@ impl KeypadKey for DoorKey {
     }
 }
 
-/* DoorCode */
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-// struct DoorCode([DoorKey; 4]);
-struct DoorCode(Vec<DoorKey>);
-
-impl From<&str> for DoorCode {
-    fn from(value: &str) -> Self {
-        DoorCode(
-            value.chars().map(DoorKey::from).collect::<Vec<DoorKey>>(),
-            //             .try_into()
-            //             .expect("incorrect length"),
-        )
+impl KeypadKey for DirectionKey {
+    fn get_pos(&self) -> Point {
+        match self {
+            DirectionKey::Up => Point::new(1, 0),
+            DirectionKey::A => Point::new(2, 0),
+            DirectionKey::Left => Point::new(0, 1),
+            DirectionKey::Down => Point::new(1, 1),
+            DirectionKey::Right => Point::new(2, 1),
+        }
     }
 }
 
@@ -104,36 +140,35 @@ const NUMBER_KEYPAD: LazyLock<HashMap<(DoorKey, DoorKey), Vec<DirectionKey>>> =
         });
 
         for (point, key) in grid.iter() {
-            assert_eq!(*point, key.get_pos());
+            assert_eq!(*point, key.get_pos(), "{:?}", key);
         }
         assert_eq!(grid.iter().count(), 11);
 
         get_best_paths(&grid)
     });
 
-const DIRECTION_KEYPAD: LazyLock<HashMap<(DirectionKey, DirectionKey), Vec<DirectionKey>>> =
-    LazyLock::new(|| {
-        let grid: Grid<char> = Grid::from(
-            "
+pub(super) const DIRECTION_KEYPAD: LazyLock<
+    HashMap<(DirectionKey, DirectionKey), Vec<DirectionKey>>,
+> = LazyLock::new(|| {
+    let grid: Grid<char> = Grid::from(
+        "
 .^A
 <v>"
-            .trim(),
-        );
+        .trim(),
+    );
 
-        let grid = grid.filter_map(|c| match c {
-            '.' => None,
-            _ => Some(DirectionKey::from(c)),
-        });
-
-        for (point, key) in grid.iter() {
-            assert_eq!(*point, key.get_pos(), "{:?}", key);
-        }
-        assert_eq!(grid.iter().count(), 5);
-
-        get_best_paths(&grid)
+    let grid = grid.filter_map(|c| match c {
+        '.' => None,
+        _ => Some(DirectionKey::from(c)),
     });
 
-/* Memoization */
+    for (point, key) in grid.iter() {
+        assert_eq!(*point, key.get_pos(), "{:?}", key);
+    }
+    assert_eq!(grid.iter().count(), 5);
+
+    get_best_paths(&grid)
+});
 
 impl<K: KeypadKey> Grid<K> {
     fn neighbors_with_direction_key(
@@ -152,6 +187,17 @@ impl<K: KeypadKey> Grid<K> {
     }
 }
 
+/// there would have been easier approaches than this
+/// most solutions for this are hardcoding the paths
+/// I went with calculating the costs between keys using dijkstra
+/// and keeping them in a lazy locked hashmap  
+/// most important is transition_cost fn
+/// to solve the kata one has to realize that ending with a key close to 'A' is ideal
+/// this makes '<' more costy later in the "round-trip" between 'A's
+/// the full sequence of cost is **<v^>**
+/// continuous travels are always cheap (represented by fixed cost of 1 in my cost-fn)
+///
+/// holy F this day was damn hard
 fn get_best_paths<T>(grid: &Grid<T>) -> HashMap<(T, T), Vec<DirectionKey>>
 where
     T: KeypadKey + Clone + Eq + Hash,
@@ -223,7 +269,6 @@ where
                     continue;
                 }
             }
-            // Record this state as the best for its position, if it beats any previous cost.
             best_at_point
                 .entry(state.pos)
                 .and_modify(|(cost, path)| {
@@ -265,28 +310,10 @@ where
     best_paths
 }
 
-impl Transpileable for DoorCode {
-    fn transpile(&self) -> DirectionKeySequence {
-        let mut pos = DoorKey::A;
-        let map = &NUMBER_KEYPAD;
-        DirectionKeySequence(
-            self.0
-                .iter()
-                .flat_map(|&key| {
-                    let mut moves = map.get(&(pos, key)).unwrap().clone();
-                    pos = key;
-                    moves.push(DirectionKey::A);
-                    moves
-                })
-                .collect(),
-        )
-    }
-}
-
 /* DirectionalKey */
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum DirectionKey {
+pub(super) enum DirectionKey {
     Up,
     Down,
     Left,
@@ -307,18 +334,6 @@ impl From<char> for DirectionKey {
     }
 }
 
-impl KeypadKey for DirectionKey {
-    fn get_pos(&self) -> Point {
-        match self {
-            DirectionKey::Up => Point::new(1, 0),
-            DirectionKey::A => Point::new(2, 0),
-            DirectionKey::Left => Point::new(0, 1),
-            DirectionKey::Down => Point::new(1, 1),
-            DirectionKey::Right => Point::new(2, 1),
-        }
-    }
-}
-
 impl Display for DirectionKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -333,7 +348,7 @@ impl Display for DirectionKey {
 
 /* DirectionKeySequence */
 
-struct DirectionKeySequence(Vec<DirectionKey>);
+pub(super) struct DirectionKeySequence(pub(super) Vec<DirectionKey>);
 
 impl From<&str> for DirectionKeySequence {
     fn from(value: &str) -> Self {
@@ -362,40 +377,33 @@ impl Transpileable for DirectionKeySequence {
                 .collect(),
         )
     }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
-fn compile(line: &str, intermediate_robots: u8) -> DirectionKeySequence {
+pub(super) fn compile(line: &str, intermediate_robots: u8) -> u128 {
     let mut code: Box<dyn Transpileable> = Box::new(DoorCode::from(line));
 
-    for _ in 0..intermediate_robots {
+    for _ in 0..intermediate_robots + 1 {
         code = Box::new(code.transpile());
     }
 
-    code.transpile()
+    code.len() as u128
 }
 
-fn quick_compile(line: &str, intermediate_robots: u8) -> u32 {
-    let code = DoorCode::from(line);
-
-    let transpile_once = code.transpile();
-
-    todo!()
-}
-
-pub fn solve_day_21(input: &str, intermediate_robots: u8) -> u32 {
+pub fn solve_day_21_slow(input: &str, intermediate_robots: u8) -> u128 {
     input
         .lines()
         .map(|line| {
             let numeric_part = &line[..3];
             let numeric_part = numeric_part
-                .parse::<u32>()
+                .parse::<u128>()
                 .expect(&format!("Couln't parse '{numeric_part}'"));
 
-            let transpiliation_length = compile(line, intermediate_robots).0.len() as u32;
+            let transpiliation_length = compile(line, intermediate_robots);
 
-            let solution = numeric_part * transpiliation_length;
-            println!("numeric_part = {numeric_part} + transpilation_length = {transpiliation_length} -> {solution}");
-            solution
+            numeric_part * transpiliation_length
         })
         .sum()
 }
@@ -403,34 +411,16 @@ pub fn solve_day_21(input: &str, intermediate_robots: u8) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::file::read_string;
     use crate::util::stringify::stringify;
 
-    use crate::util::file::read_string;
     #[test]
     fn should_solve_part_1() {
         let input = read_string("./src/day21/input.txt").unwrap();
 
-        let solution = solve_day_21(&input.trim(), 2);
+        let solution = solve_day_21_slow(&input.trim(), 2);
 
         assert_eq!(169390, solution);
-    }
-
-    #[test]
-    fn try_single_letter() {
-        let solution = compile("0", 25).0.len();
-
-        println!("{solution}");
-        assert_eq!(0, solution);
-    }
-
-    #[test]
-    fn should_solve_part_2() {
-        let input = read_string("./src/day21/input.txt").unwrap();
-
-        let solution = solve_day_21(&input.trim(), 17);
-
-        println!("{solution}");
-        assert_ne!(0, solution);
     }
 
     #[test]
@@ -443,7 +433,7 @@ mod tests {
 379A"
             .trim();
 
-        let solution = solve_day_21(&input, 2);
+        let solution = solve_day_21_slow(&input, 2);
 
         assert_eq!(126384, solution);
     }
@@ -451,24 +441,24 @@ mod tests {
     #[test]
     fn debug() {
         assert_eq!(
-            "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A".len(),
-            compile("029A", 2).0.len()
+            "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A".len() as u128,
+            compile("029A", 2)
         );
         assert_eq!(
-            "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A".len(),
-            compile("980A", 2).0.len()
+            "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A".len() as u128,
+            compile("980A", 2)
         );
         assert_eq!(
-            "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len(),
-            compile("179A", 2).0.len()
+            "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len() as u128,
+            compile("179A", 2)
         );
         assert_eq!(
-            "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A".len(),
-            compile("456A", 2).0.len()
+            "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A".len() as u128,
+            compile("456A", 2)
         );
         assert_eq!(
-            "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len(),
-            compile("379A", 2).0.len(),
+            "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len() as u128,
+            compile("379A", 2),
         );
     }
 

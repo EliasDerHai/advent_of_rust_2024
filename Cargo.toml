@@ -12,4 +12,5 @@ path = "benches/bench.rs"
 harness = false
 
 [dependencies]
+memoize = "0.4.2"
 rayon = "1.10.0"
