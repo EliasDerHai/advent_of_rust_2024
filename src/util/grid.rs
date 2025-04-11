@@ -78,6 +78,18 @@ impl<T> Grid<T> {
 
         Grid { map: next }
     }
+
+    pub fn filter_map<F, U>(self, mut map_fn: F) -> Grid<U>
+    where
+        F: FnMut(T) -> Option<U>,
+    {
+        let next: HashMap<Point, U> = self
+            .into_iter()
+            .filter_map(|(p, t)| map_fn(t).map(|u| (p, u)))
+            .collect();
+
+        Grid { map: next }
+    }
 }
 
 #[cfg(test)]

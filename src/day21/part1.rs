@@ -1,16 +1,23 @@
-#![allow(unused_variables, dead_code)]
-
-use std::fmt::Display;
-
+use crate::util::grid::Grid;
 use crate::util::point::Point;
+use crate::util::stringify::stringify;
+use std::cmp::{Ordering, Reverse};
+use std::collections::{BinaryHeap, HashMap};
+use std::fmt::Display;
+use std::hash::Hash;
+use std::sync::LazyLock;
 
-trait KeypadKey {
+pub trait KeypadKey {
     fn get_pos(&self) -> Point;
+}
+
+trait Transpileable {
+    fn transpile(&self) -> DirectionKeySequence;
 }
 
 /* DoorKey */
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum DoorKey {
     A,
     K0,
@@ -65,60 +72,210 @@ impl KeypadKey for DoorKey {
 /* DoorCode */
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-struct DoorCode([DoorKey; 4]);
+// struct DoorCode([DoorKey; 4]);
+struct DoorCode(Vec<DoorKey>);
 
 impl From<&str> for DoorCode {
     fn from(value: &str) -> Self {
         DoorCode(
-            value
-                .chars()
-                .map(DoorKey::from)
-                .collect::<Vec<DoorKey>>()
-                .try_into()
-                .expect("incorrect length"),
+            value.chars().map(DoorKey::from).collect::<Vec<DoorKey>>(),
+            //             .try_into()
+            //             .expect("incorrect length"),
         )
     }
 }
 
-fn parse_door_codes(input: &str) -> [DoorCode; 5] {
-    input
-        .trim()
-        .lines()
-        .map(DoorCode::from)
-        .collect::<Vec<DoorCode>>()
-        .try_into()
-        .expect("incorrect length")
+/* Pathfinding */
+
+const NUMBER_KEYPAD: LazyLock<HashMap<(DoorKey, DoorKey), Vec<DirectionKey>>> =
+    LazyLock::new(|| {
+        let grid: Grid<char> = Grid::from(
+            "
+789
+456
+123
+.0A"
+            .trim(),
+        );
+
+        let grid = grid.filter_map(|c| match c {
+            '.' => None,
+            _ => Some(DoorKey::from(c)),
+        });
+
+        for (point, key) in grid.iter() {
+            assert_eq!(*point, key.get_pos());
+        }
+        assert_eq!(grid.iter().count(), 11);
+
+        get_best_paths(&grid)
+    });
+
+const DIRECTION_KEYPAD: LazyLock<HashMap<(DirectionKey, DirectionKey), Vec<DirectionKey>>> =
+    LazyLock::new(|| {
+        let grid: Grid<char> = Grid::from(
+            "
+.^A
+<v>"
+            .trim(),
+        );
+
+        let grid = grid.filter_map(|c| match c {
+            '.' => None,
+            _ => Some(DirectionKey::from(c)),
+        });
+
+        for (point, key) in grid.iter() {
+            assert_eq!(*point, key.get_pos(), "{:?}", key);
+        }
+        assert_eq!(grid.iter().count(), 5);
+
+        get_best_paths(&grid)
+    });
+
+/* Memoization */
+
+impl<K: KeypadKey> Grid<K> {
+    fn neighbors_with_direction_key(
+        &self,
+        p: &Point,
+    ) -> impl Iterator<Item = (Point, &K, DirectionKey)> {
+        [
+            (p.left(), DirectionKey::Left),
+            (p.down(), DirectionKey::Down),
+            (p.up(), DirectionKey::Up),
+            (p.right(), DirectionKey::Right),
+        ]
+        .into_iter()
+        .map(|(n, key)| (n, self.get(&n), key))
+        .filter_map(|(n, c, key)| c.map(|inner_c| (n, inner_c, key)))
+    }
 }
 
-impl DoorCode {
-    fn transpile(&self, mut current_pos: Point) -> DirectionKeySequence {
+fn get_best_paths<T>(grid: &Grid<T>) -> HashMap<(T, T), Vec<DirectionKey>>
+where
+    T: KeypadKey + Clone + Eq + Hash,
+{
+    #[derive(Clone)]
+    struct State {
+        cost: u32,
+        pos: Point,
+        last: Option<DirectionKey>,
+        path: Vec<DirectionKey>,
+    }
+
+    impl Eq for State {}
+
+    impl PartialEq for State {
+        fn eq(&self, other: &Self) -> bool {
+            self.cost == other.cost
+        }
+    }
+
+    impl Ord for State {
+        fn cmp(&self, other: &Self) -> Ordering {
+            other.cost.cmp(&self.cost)
+        }
+    }
+
+    impl PartialOrd for State {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    fn transition_cost(prev: Option<DirectionKey>, new: DirectionKey, traveled: usize) -> u32 {
+        if Some(new) == prev {
+            1
+        } else {
+            let dir = match new {
+                DirectionKey::Left => 4,
+                DirectionKey::Down => 3,
+                DirectionKey::Up => 2,
+                DirectionKey::Right => 1,
+                DirectionKey::A => panic!("Invalid state"),
+            };
+            10 + dir * traveled as u32
+        }
+    }
+
+    let mut best_paths = HashMap::new();
+
+    for (start_point, start_key_ref) in grid.iter() {
+        let start_key = start_key_ref.clone();
+        let init_point = *start_point;
+        let mut best_cost: HashMap<(Point, Option<DirectionKey>), u32> = HashMap::new();
+        let mut best_at_point: HashMap<Point, (u32, Vec<DirectionKey>)> = HashMap::new();
+        let mut heap = BinaryHeap::new();
+        let init_state = State {
+            cost: 0,
+            pos: init_point,
+            last: None,
+            path: Vec::new(),
+        };
+        best_cost.insert((init_point, None), 0);
+        best_at_point.insert(init_point, (0, Vec::new()));
+        heap.push(Reverse(init_state));
+
+        while let Some(Reverse(state)) = heap.pop() {
+            if let Some(&recorded) = best_cost.get(&(state.pos, state.last)) {
+                if state.cost > recorded {
+                    continue;
+                }
+            }
+            // Record this state as the best for its position, if it beats any previous cost.
+            best_at_point
+                .entry(state.pos)
+                .and_modify(|(cost, path)| {
+                    if state.cost < *cost {
+                        *cost = state.cost;
+                        *path = state.path.clone();
+                    }
+                })
+                .or_insert((state.cost, state.path.clone()));
+
+            for (n_pos, _, direction) in grid.neighbors_with_direction_key(&state.pos) {
+                let new_cost =
+                    state.cost + transition_cost(state.last, direction, state.path.len());
+                let mut new_path = state.path.clone();
+                new_path.push(direction);
+                let new_state = State {
+                    cost: new_cost,
+                    pos: n_pos,
+                    last: Some(direction),
+                    path: new_path,
+                };
+                let key = (n_pos, Some(direction));
+                if best_cost
+                    .get(&key)
+                    .map_or(true, |&existing| new_cost < existing)
+                {
+                    best_cost.insert(key, new_cost);
+                    heap.push(Reverse(new_state));
+                }
+            }
+        }
+
+        for (p, (_cost, path)) in best_at_point.iter() {
+            if let Some(dest_key) = grid.get(p) {
+                best_paths.insert((start_key.clone(), dest_key.clone()), path.clone());
+            }
+        }
+    }
+    best_paths
+}
+
+impl Transpileable for DoorCode {
+    fn transpile(&self) -> DirectionKeySequence {
+        let mut pos = DoorKey::A;
+        let map = &NUMBER_KEYPAD;
         DirectionKeySequence(
             self.0
                 .iter()
-                .flat_map(|key| {
-                    let mut moves = Vec::new();
-                    let target_pos = key.get_pos();
-
-                    while current_pos.x < target_pos.x {
-                        moves.push(DirectionalKey::Right);
-                        current_pos = current_pos.right();
-                    }
-                    while current_pos.x > target_pos.x {
-                        moves.push(DirectionalKey::Left);
-                        current_pos = current_pos.left();
-                    }
-                    while current_pos.y > target_pos.y {
-                        moves.push(DirectionalKey::Up);
-                        current_pos = current_pos.up();
-                    }
-                    while current_pos.y < target_pos.y {
-                        moves.push(DirectionalKey::Down);
-                        current_pos = current_pos.down();
-                    }
-                    if current_pos == target_pos {
-                        moves.push(DirectionalKey::A);
-                    }
-
+                .flat_map(|&key| {
+                    let mut moves = map.get(&(pos, key)).unwrap().clone();
+                    pos = key;
+                    moves.push(DirectionKey::A);
                     moves
                 })
                 .collect(),
@@ -128,8 +285,8 @@ impl DoorCode {
 
 /* DirectionalKey */
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-enum DirectionalKey {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum DirectionKey {
     Up,
     Down,
     Left,
@@ -137,87 +294,69 @@ enum DirectionalKey {
     A,
 }
 
-impl From<char> for DirectionalKey {
+impl From<char> for DirectionKey {
     fn from(value: char) -> Self {
         match value {
-            '^' => DirectionalKey::Up,
-            'A' => DirectionalKey::A,
-            '<' => DirectionalKey::Left,
-            'v' => DirectionalKey::Down,
-            '>' => DirectionalKey::Right,
+            '^' => DirectionKey::Up,
+            'A' => DirectionKey::A,
+            '<' => DirectionKey::Left,
+            'v' => DirectionKey::Down,
+            '>' => DirectionKey::Right,
             _ => panic!("unexpected value '{value}'"),
         }
     }
 }
 
-impl KeypadKey for DirectionalKey {
+impl KeypadKey for DirectionKey {
     fn get_pos(&self) -> Point {
         match self {
-            DirectionalKey::Up => Point::new(1, 0),
-            DirectionalKey::A => Point::new(2, 0),
-            DirectionalKey::Left => Point::new(0, 1),
-            DirectionalKey::Down => Point::new(1, 1),
-            DirectionalKey::Right => Point::new(2, 1),
+            DirectionKey::Up => Point::new(1, 0),
+            DirectionKey::A => Point::new(2, 0),
+            DirectionKey::Left => Point::new(0, 1),
+            DirectionKey::Down => Point::new(1, 1),
+            DirectionKey::Right => Point::new(2, 1),
         }
     }
 }
 
-impl Display for DirectionalKey {
+impl Display for DirectionKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DirectionalKey::Up => write!(f, "^"),
-            DirectionalKey::Down => write!(f, "v"),
-            DirectionalKey::Left => write!(f, "<"),
-            DirectionalKey::Right => write!(f, ">"),
-            DirectionalKey::A => write!(f, "A"),
+            DirectionKey::Up => write!(f, "^"),
+            DirectionKey::Down => write!(f, "v"),
+            DirectionKey::Left => write!(f, "<"),
+            DirectionKey::Right => write!(f, ">"),
+            DirectionKey::A => write!(f, "A"),
         }
     }
 }
 
 /* DirectionKeySequence */
 
-struct DirectionKeySequence(Vec<DirectionalKey>);
+struct DirectionKeySequence(Vec<DirectionKey>);
 
 impl From<&str> for DirectionKeySequence {
     fn from(value: &str) -> Self {
         DirectionKeySequence(
             value
                 .chars()
-                .map(DirectionalKey::from)
-                .collect::<Vec<DirectionalKey>>(),
+                .map(DirectionKey::from)
+                .collect::<Vec<DirectionKey>>(),
         )
     }
 }
 
-impl DirectionKeySequence {
-    fn transpile(&self, mut current_pos: Point) -> DirectionKeySequence {
+impl Transpileable for DirectionKeySequence {
+    fn transpile(&self) -> DirectionKeySequence {
+        let map = &DIRECTION_KEYPAD;
+        let mut pos = DirectionKey::A;
         DirectionKeySequence(
             self.0
                 .iter()
-                .flat_map(|key| {
-                    let mut moves = Vec::new();
-                    let target_pos = key.get_pos();
-
-                    while current_pos.x < target_pos.x {
-                        moves.push(DirectionalKey::Right);
-                        current_pos = current_pos.right();
-                    }
-                    while current_pos.x > target_pos.x {
-                        moves.push(DirectionalKey::Left);
-                        current_pos = current_pos.left();
-                    }
-                    while current_pos.y > target_pos.y {
-                        moves.push(DirectionalKey::Up);
-                        current_pos = current_pos.up();
-                    }
-                    while current_pos.y < target_pos.y {
-                        moves.push(DirectionalKey::Down);
-                        current_pos = current_pos.down();
-                    }
-                    if current_pos == target_pos {
-                        moves.push(DirectionalKey::A);
-                    }
-
+                .flat_map(|&key| {
+                    let mut moves = map.get(&(pos, key)).unwrap().clone();
+                    pos = key;
+                    moves.push(DirectionKey::A);
                     moves
                 })
                 .collect(),
@@ -225,7 +364,25 @@ impl DirectionKeySequence {
     }
 }
 
-pub fn solve_day_21_part_01(input: &str) -> u32 {
+fn compile(line: &str, intermediate_robots: u8) -> DirectionKeySequence {
+    let mut code: Box<dyn Transpileable> = Box::new(DoorCode::from(line));
+
+    for _ in 0..intermediate_robots {
+        code = Box::new(code.transpile());
+    }
+
+    code.transpile()
+}
+
+fn quick_compile(line: &str, intermediate_robots: u8) -> u32 {
+    let code = DoorCode::from(line);
+
+    let transpile_once = code.transpile();
+
+    todo!()
+}
+
+pub fn solve_day_21(input: &str, intermediate_robots: u8) -> u32 {
     input
         .lines()
         .map(|line| {
@@ -234,13 +391,9 @@ pub fn solve_day_21_part_01(input: &str) -> u32 {
                 .parse::<u32>()
                 .expect(&format!("Couln't parse '{numeric_part}'"));
 
-            let code = DoorCode::from(line);
-            let transpiled = code.transpile(DoorKey::A.get_pos());
-            let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
-            let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
-            let transpiliation_length = transpiled.0.len() as u32;
+            let transpiliation_length = compile(line, intermediate_robots).0.len() as u32;
 
-            let solution =numeric_part * transpiliation_length ;
+            let solution = numeric_part * transpiliation_length;
             println!("numeric_part = {numeric_part} + transpilation_length = {transpiliation_length} -> {solution}");
             solution
         })
@@ -254,17 +407,34 @@ mod tests {
 
     use crate::util::file::read_string;
     #[test]
-    fn should_solve() {
+    fn should_solve_part_1() {
         let input = read_string("./src/day21/input.txt").unwrap();
 
-        let solution = solve_day_21_part_01(&input);
+        let solution = solve_day_21(&input.trim(), 2);
+
+        assert_eq!(169390, solution);
+    }
+
+    #[test]
+    fn try_single_letter() {
+        let solution = compile("0", 25).0.len();
 
         println!("{solution}");
         assert_eq!(0, solution);
     }
 
     #[test]
-    fn should_solve_example() {
+    fn should_solve_part_2() {
+        let input = read_string("./src/day21/input.txt").unwrap();
+
+        let solution = solve_day_21(&input.trim(), 17);
+
+        println!("{solution}");
+        assert_ne!(0, solution);
+    }
+
+    #[test]
+    fn should_example() {
         let input = "
 029A
 980A
@@ -273,30 +443,39 @@ mod tests {
 379A"
             .trim();
 
-        let solution = solve_day_21_part_01(&input);
+        let solution = solve_day_21(&input, 2);
 
-        println!("{solution}");
         assert_eq!(126384, solution);
     }
 
-    // TODO FIXME
     #[test]
     fn debug() {
-        let code = DoorCode::from("179A");
-        let transpiled = code.transpile(DoorKey::A.get_pos());
-        let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
-        let transpiled = transpiled.transpile(DirectionalKey::A.get_pos());
-
         assert_eq!(
-            "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A",
-            stringify(transpiled.0)
+            "<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A".len(),
+            compile("029A", 2).0.len()
+        );
+        assert_eq!(
+            "<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A".len(),
+            compile("980A", 2).0.len()
+        );
+        assert_eq!(
+            "<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len(),
+            compile("179A", 2).0.len()
+        );
+        assert_eq!(
+            "<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A".len(),
+            compile("456A", 2).0.len()
+        );
+        assert_eq!(
+            "<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A".len(),
+            compile("379A", 2).0.len(),
         );
     }
 
     #[test]
     fn should_transpile_doorcode() {
         let code: DoorCode = "029A".into();
-        let transpiled = code.transpile(DoorKey::A.get_pos());
+        let transpiled = code.transpile();
 
         assert_eq!("<A^A>^^AvvvA", stringify(transpiled.0));
     }
@@ -304,8 +483,44 @@ mod tests {
     #[test]
     fn should_transpile_directioncode() {
         let sequence: DirectionKeySequence = "<A^A>^^AvvvA".into();
-        let transpiled = sequence.transpile(DirectionalKey::A.get_pos());
+        let transpiled = sequence.transpile();
 
-        assert_eq!("<<vA>>^A<A>AvA<^AA>A<vAAA>^A", stringify(transpiled.0));
+        assert_eq!("v<<A>>^A<A>AvA<^AA>A<vAAA^>A", stringify(transpiled.0));
+    }
+
+    #[test]
+    fn best_paths() {
+        let map = &DIRECTION_KEYPAD;
+
+        assert_eq!(
+            ">>^",
+            stringify(
+                map.get(&(DirectionKey::Left, DirectionKey::A))
+                    .unwrap()
+                    .clone()
+            )
+        );
+        assert_eq!(
+            "<v",
+            stringify(
+                map.get(&(DirectionKey::A, DirectionKey::Down))
+                    .unwrap()
+                    .clone()
+            )
+        );
+        assert_eq!(
+            "^>",
+            stringify(
+                map.get(&(DirectionKey::Down, DirectionKey::A))
+                    .unwrap()
+                    .clone()
+            )
+        );
+
+        let map = &NUMBER_KEYPAD;
+        assert_eq!(
+            "^^^",
+            stringify(map.get(&(DoorKey::A, DoorKey::K9)).unwrap().clone())
+        );
     }
 }
