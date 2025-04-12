@@ -6,6 +6,13 @@ FOLDER_SNAKE=${FOLDER_NAME//day/day_}
 FOLDER_PATH=${REPO_ROOT}/src/${FOLDER_NAME}
 
 cd "$REPO_ROOT" || exit 1
+
+if [ -d "$FOLDER_PATH" ]; then 
+	echo "$FOLDER_NAME already exists - Did you put the wrong day-tag?"
+	echo "No change was done - in order to fully reset an existing day remove the folder and rerun the script..."
+	exit 1
+fi
+
 mkdir -p "$FOLDER_PATH"
 touch "$FOLDER_PATH/input.txt"
 
@@ -73,7 +80,6 @@ pub mod part1;
 pub mod part2;
 EOF
 
-# todo append mod to lib.rs
+echo "pub mod $FOLDER_NAME;" >> $REPO_ROOT/src/lib.rs
 
 echo "Created new day directory: $FOLDER_PATH"
-read
