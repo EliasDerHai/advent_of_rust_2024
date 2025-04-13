@@ -1,14 +1,12 @@
-#![allow(unused_variables, dead_code)]
-
 use std::ops::{Div, Mul};
 
 const PRUNE_VAL: u64 = 16777216;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Secret(u64);
+pub(super) struct Secret(u64);
 
 impl Secret {
-    fn new(v: u64) -> Self {
+    pub(super) fn new(v: u64) -> Self {
         Secret(v)
     }
     fn mix(&mut self, other: u64) -> Self {
@@ -19,10 +17,10 @@ impl Secret {
         self.0 %= PRUNE_VAL;
         *self
     }
-    fn v(&self) -> u64 {
+    pub(super) fn v(&self) -> u64 {
         self.0
     }
-    fn evolve(&mut self) -> Self {
+    pub(super) fn evolve(&mut self) -> Self {
         self.mix(*self * 64);
         self.prune();
         self.mix(*self / 32);
