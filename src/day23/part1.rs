@@ -6,10 +6,10 @@ use std::{
     rc::{Rc, Weak},
 };
 
-#[derive(Debug)]
-struct GraphNode<K: Hash + Eq> {
-    id: K,
-    linked: Vec<Weak<RefCell<GraphNode<K>>>>,
+#[derive(Debug, Clone)]
+pub(super) struct GraphNode<K: Hash + Eq> {
+    pub id: K,
+    pub linked: Vec<Weak<RefCell<GraphNode<K>>>>,
 }
 
 impl<K: Hash + Eq> PartialEq for GraphNode<K> {
@@ -33,22 +33,32 @@ impl<K: Hash + Eq> GraphNode<K> {
             linked: Vec::new(),
         }
     }
+
+    pub(super) fn is_connected(&self, other: &GraphNode<K>) -> bool {
+        self.linked
+            .iter()
+            .any(|el| el.upgrade().unwrap().borrow().id == other.id)
+    }
+
+    pub(super) fn upgrade_expect(rc: &Weak<RefCell<Self>>) -> Rc<RefCell<Self>> {
+        rc.upgrade().expect("shouldn't have been dropped")
+    }
 }
 
 #[derive(Debug)]
-struct Graph<K: Hash + Eq> {
-    nodes: HashMap<K, Rc<RefCell<GraphNode<K>>>>,
+pub struct Graph<K: Hash + Eq> {
+    pub(super) nodes: HashMap<K, Rc<RefCell<GraphNode<K>>>>,
 }
 
 impl<K: Hash + Eq + Copy + Ord> Graph<K> {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Graph {
             nodes: HashMap::new(),
         }
     }
 
     /// adds nodes and edge between them if not yet present
-    fn add_edge(mut self, from: K, to: K) -> Self {
+    pub(super) fn add_edge(mut self, from: K, to: K) -> Self {
         let from = self
             .nodes
             .entry(from)
@@ -68,7 +78,7 @@ impl<K: Hash + Eq + Copy + Ord> Graph<K> {
     }
 }
 
-type Computer = GraphNode<(char, char)>;
+pub(super) type Computer = GraphNode<(char, char)>;
 
 impl Display for Computer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -76,7 +86,7 @@ impl Display for Computer {
     }
 }
 
-fn to_char_tupel(value: &str) -> (char, char) {
+pub fn to_char_tupel(value: &str) -> (char, char) {
     assert_eq!(2, value.len());
     let mut chars = value.chars();
     (chars.next().unwrap(), chars.next().unwrap())
@@ -91,54 +101,44 @@ pub fn solve_day_23_part_01(input: &str) -> u32 {
             graph.add_edge(to_char_tupel(left), to_char_tupel(right))
         });
 
-    let x: HashSet<[(char, char); 3]> = graph
+    graph
         .nodes
         .iter()
         .filter(|&(&(c, _), _)| c == 't')
         .flat_map(|(&key, root)| {
+            let root_id = root.borrow().id;
             root.borrow()
                 .linked
                 .iter()
-                .flat_map(move |child| {
-                    child
-                        .upgrade()
-                        .expect("should not have been dropped")
+                .flat_map(|child| {
+                    let child_id = GraphNode::upgrade_expect(child).borrow().id;
+                    GraphNode::upgrade_expect(child)
                         .borrow()
                         .linked
                         .iter()
-                        .flat_map(move |grand_child| {
-                            grand_child
-                                .upgrade()
-                                .expect("should not have been dropped")
+                        .flat_map(|grand_child| {
+                            let grand_child_id = GraphNode::upgrade_expect(grand_child).borrow().id;
+                            if GraphNode::upgrade_expect(grand_child)
                                 .borrow()
                                 .linked
                                 .iter()
-                                .filter(|root_again| {
-                                    root_again
-                                        .upgrade()
-                                        .expect("should not have been dropped")
-                                        .borrow()
-                                        .id
-                                        == key
+                                .any(|root_again| {
+                                    GraphNode::upgrade_expect(root_again).borrow().id == key
                                 })
-                                .map(move |_| {
-                                    let mut triangle = [
-                                        root.borrow().id,
-                                        child.upgrade().unwrap().borrow().id,
-                                        grand_child.upgrade().unwrap().borrow().id,
-                                    ];
-                                    triangle.sort();
-                                    triangle
-                                })
-                                .collect::<Vec<_>>()
+                            {
+                                let mut triangle = [root_id, child_id, grand_child_id];
+                                triangle.sort();
+                                Some(triangle)
+                            } else {
+                                None
+                            }
                         })
                         .collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>()
         })
-        .collect();
-
-    x.len() as u32
+        .collect::<HashSet<[(char, char); 3]>>()
+        .len() as u32
 }
 
 #[cfg(test)]
