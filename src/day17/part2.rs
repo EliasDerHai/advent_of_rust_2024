@@ -1,4 +1,3 @@
-use super::part1::*;
 use std::fmt;
 
 // wasted too much time with stupid reverse engineering (see https://blog.jverkamp.com/2024/12/17/aoc-2024-day-17-virtual-machininator/)
