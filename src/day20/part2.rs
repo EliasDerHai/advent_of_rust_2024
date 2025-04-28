@@ -21,7 +21,7 @@ static MANHATTAN_OFFSETS_20: LazyLock<Vec<(Point, u8)>> = LazyLock::new(|| {
 
 pub fn solve_day_20_part_02(input: &str, threshold: u32) -> usize {
     let map = ReindeerOlympicMap::from(input);
-    let costs = a_star_pathfinding(&map).collect_cost_map();
+    let costs = a_star_pathfinding(&map);
 
     assert_eq!(
         costs.len(),

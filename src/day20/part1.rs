@@ -3,6 +3,7 @@ use crate::util::point::Point;
 use std::{
     cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap, HashSet},
+    mem,
     rc::Rc,
 };
 
@@ -100,6 +101,23 @@ impl PartialOrd for PathNodeWithParent {
     }
 }
 
+/// needed since the recursive dropping of Parents causes stack-overflow - Other option would be
+/// Weak<PathNodeWithParent> but that's more of a headache
+impl Drop for PathNodeWithParent {
+    fn drop(&mut self) {
+        let mut next: Option<Rc<PathNodeWithParent>> = mem::take(&mut self.parent);
+
+        while let Some(rc_node) = next {
+            let mut node = match Rc::try_unwrap(rc_node) {
+                Ok(inner) => inner,
+                Err(_) => break,
+            };
+
+            next = mem::take(&mut node.parent);
+        }
+    }
+}
+
 impl PathNodeWithParent {
     fn new_start(p: Point, g: u32, h: u32) -> Self {
         PathNodeWithParent {
@@ -128,7 +146,7 @@ impl PathNodeWithParent {
 
         while let Some(parent) = &node.parent {
             map.insert(parent.p, parent.g);
-            node = Rc::clone(&parent);
+            node = Rc::clone(parent);
         }
 
         map
@@ -141,7 +159,7 @@ pub(super) fn h(n: &Point, goal: &Point) -> u32 {
     delta_x + delta_y
 }
 
-pub(super) fn a_star_pathfinding(map: &ReindeerOlympicMap) -> Rc<PathNodeWithParent> {
+pub(super) fn a_star_pathfinding(map: &ReindeerOlympicMap) -> HashMap<Point, u32> {
     let start_node = Rc::new(PathNodeWithParent::new_start(
         map.start,
         0,
@@ -161,7 +179,7 @@ pub(super) fn a_star_pathfinding(map: &ReindeerOlympicMap) -> Rc<PathNodeWithPar
         closed.insert(current.p);
 
         if current.p == map.end {
-            return current;
+            return current.collect_cost_map();
         }
 
         map.grid
@@ -259,7 +277,7 @@ fn a_star_pathfinding_distribution(
 
 pub fn solve_day_20_part_01(input: &str, offset: u32) -> usize {
     let map = ReindeerOlympicMap::from(input);
-    let cost_map = a_star_pathfinding(&map).collect_cost_map();
+    let cost_map = a_star_pathfinding(&map);
     let lowest_cost_no_cheating = *cost_map.values().max().unwrap();
     let cost_per_cheat =
         a_star_pathfinding_distribution(&map, &cost_map, offset, lowest_cost_no_cheating);
@@ -323,7 +341,7 @@ mod tests {
     fn should_find_best_solution_without_cheating() {
         let map = ReindeerOlympicMap::from(SAMPLE_MAZE.trim());
         let cost = a_star_pathfinding(&map);
-        assert_eq!(84, cost.f);
+        assert_eq!(&84, cost.get(&map.end).unwrap());
     }
 
     #[test]
@@ -348,7 +366,7 @@ mod tests {
                 .trim(),
         );
         let cost = a_star_pathfinding(&map);
-        assert_eq!(72, cost.f);
+        assert_eq!(&72, cost.get(&map.end).unwrap());
     }
 
     #[test]
