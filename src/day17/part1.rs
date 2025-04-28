@@ -7,7 +7,6 @@ impl From<&str> for TuringTape {
     fn from(value: &str) -> Self {
         let raw: Vec<u8> = value
             .split(',')
-            .into_iter()
             .map(|el| el.parse::<u8>().unwrap())
             .collect();
         let v = raw
@@ -31,7 +30,7 @@ pub(super) fn parse(input: &str) -> (TuringTape, TuringState) {
     const REG_B_PREFIX: &str = "Register B: ";
     const REG_C_PREFIX: &str = "Register C: ";
     const REG_TAPE_PREFIX: &str = "Program: ";
-    for line in input.trim().lines().into_iter() {
+    for line in input.trim().lines() {
         if line.starts_with(REG_A_PREFIX) {
             a_val = Some(line[REG_A_PREFIX.len()..].parse::<u32>().unwrap())
         }
